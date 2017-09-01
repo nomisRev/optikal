@@ -11,11 +11,12 @@ But getters, setters don't compose, and when dealing with nested objects it coul
 
 Let's examine the following example. We have the following class structure. With the below defined Employee.
 
-`data class Street(val number: Int, val name: String)`
-`data class Address(val city: String, val street: Street)`
-`data class Company(val name: String, val address: Address)`
-`data class Employee(val name: String, val company: Company)`
-
+```
+data class Street(val number: Int, val name: String)
+data class Address(val city: String, val street: Street)
+data class Company(val name: String, val address: Address)
+data class Employee(val name: String, val company: Company)
+```
 
 ```kotlin
 import optikal.sample.*
@@ -79,12 +80,12 @@ In the previous example we manually created a lens for a `Token`. Which is fine 
 if this could just be generated for us.
 
 If we add the `@Lenses` annotation to a data class its lenses will be automatically generated for it. So let's simplify our first example with lenses.
-
-`@Lenses data class Street(val number: Int, val name: String)`
-`@Lenses data class Address(val city: String, val street: Street)`
-`@Lenses data class Company(val name: String, val address: Address)`
-`@Lenses data class Employee(val name: String, val company: Company)`
-
+```
+@Lenses data class Street(val number: Int, val name: String)
+@Lenses data class Address(val city: String, val street: Street)
+@Lenses data class Company(val name: String, val address: Address)
+@Lenses data class Employee(val name: String, val company: Company)
+```
 ```kotlin
 import optikal.*
 import optikal.sample.*
