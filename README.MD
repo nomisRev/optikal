@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/nomisRev/optikal.svg?branch=master)](https://travis-ci.org/nomisRev/optikal)
+
 # Optikal
 
 Optikal is an optics library for Kotlin strongly inspired by [Scala Monocle](https://julien-truffaut.github.io/Monocle/).
