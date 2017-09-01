@@ -73,6 +73,31 @@ subprojects { project ->
         executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
     }
 
+    task upload() {
+        group = "deployment"
+        description "Upload artifact to bintray"
+
+        doLast {
+            if (VERSION_NAME.toLowerCase().contains("snapshot")) {
+                println("Deployment of snapshots is ignored")
+            } else {
+                apply plugin: 'com.jfrog.bintray'
+                bintray {
+                    user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
+                    key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : System.getenv('BINTRAY_API_KEY')
+                    configurations = ['archives']
+                    pkg {
+                        repo = 'maven'
+                        name = POM_ARTIFACT_ID
+                        userOrg = POM_DEVELOPER_ID
+                    }
+                }
+
+                upload.finalizedBy bintrayUpload
+            }
+        }
+    }
+
 }
 
 task wrapper(type: Wrapper) {

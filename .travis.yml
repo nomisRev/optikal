@@ -1,5 +1,4 @@
 language: kotlin
-sudo: required
 dist: trusty
 
 jdk:
@@ -11,3 +10,7 @@ script:
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
+
+deploy:
+  provider: script
+  script: ./gradlew :optikal:upload :optikal-processor:upload
