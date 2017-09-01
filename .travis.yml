@@ -1,0 +1,13 @@
+language: kotlin
+sudo: required
+dist: trusty
+
+jdk:
+  - oraclejdk8
+
+script:
+  - ./gradlew clean build :sample:runAnk
+  - ./gradlew codeCoverageReport
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

@@ -1,0 +1,32 @@
+apply plugin: 'ank-gradle-plugin'
+apply plugin: 'kotlin-kapt'
+apply plugin: 'idea'
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+    testCompile "io.kotlintest:kotlintest:$kotlinTestVersion"
+
+    kapt project(':optikal-processor')
+    compile project(':optikal')
+}
+
+idea {
+    module {
+        sourceDirs += files(
+                'build/generated/source/kapt/main',
+                'build/generated/source/kaptKotlin/main',
+                'build/tmp/kapt/main/kotlinGenerated')
+        generatedSourceDirs += files(
+                'build/generated/source/kapt/main',
+                'build/generated/source/kaptKotlin/main',
+                'build/tmp/kapt/main/kotlinGenerated')
+    }
+}
+
+ank {
+    source = file("docs")
+    target = file("build/docs")
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+compileKotlin.kotlinOptions.freeCompilerArgs += ["-Xskip-runtime-version-check"]

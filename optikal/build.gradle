@@ -1,0 +1,6 @@
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+    testCompile "io.kotlintest:kotlintest:$kotlinTestVersion"
+}
+
+//build.dependsOn ':detekt'

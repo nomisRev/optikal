@@ -1,0 +1,5 @@
+rootProject.name = 'optikal'
+include 'optikal-processor'
+include 'sample'
+include 'optikal'
+
