@@ -15,6 +15,13 @@ class LensTest : StringSpec() {
             set = { value: String -> { token: Token -> token.copy(value = value) } }
     )
 
+    data class User(val token: Token)
+
+    val userLens: Lens<User, Token> = Lens(
+            get = { user: User -> user.token },
+            set = { token: Token -> { user: User -> user.copy(token = token) } }
+    )
+
     init {
         "Can set a new value for a type" {
             forAll({ newValue: String ->
@@ -36,6 +43,49 @@ class LensTest : StringSpec() {
                 modifiedToken.value == modifiedValue
             })
         }
+
+        "Evaluating a target within a Lens" {
+
+            "With a positive predicate" {
+                forAll({ targetValue: String ->
+                    tokenLens.exist { it == targetValue }(Token(targetValue))
+                })
+            }
+
+            "With a negative predicate" {
+                forAll({ targetValue: String ->
+                    tokenLens.exist { it != targetValue }(Token(targetValue)).not()
+                })
+            }
+
+        }
+
+        "finding a target within a Lens" {
+            forAll({ targetValue: String ->
+                tokenLens.find { it == targetValue }(Token(targetValue)).isDefined
+            })
+        }
+
+        "Composing multiple lenses together" {
+            val userTokenLens = userLens composeLens tokenLens
+
+            forAll({ newValue: String ->
+                val user = User(Token("old value"))
+                userTokenLens.set(newValue)(user) == userLens.set(tokenLens.modify({ newValue }, user.token))(user)
+            })
+
+        }
+
+        "Composing multiple lenses together" {
+            val userTokenLens = userLens + tokenLens
+
+            forAll({ newValue: String ->
+                val user = User(Token("old value"))
+                userTokenLens.set(newValue)(user) == userLens.set(tokenLens.modify({ newValue }, user.token))(user)
+            })
+
+        }
+
     }
 
 }
