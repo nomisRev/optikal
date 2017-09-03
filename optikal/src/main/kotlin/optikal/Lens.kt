@@ -1,6 +1,7 @@
 package optikal
 
 @Retention(AnnotationRetention.SOURCE)
+@Target(AnnotationTarget.CLASS)
 annotation class Lenses
 
 data class Lens<A, B>(val get: (A) -> B, val set: (B) -> (A) -> A) {

@@ -10,22 +10,32 @@ class LensTest : StringSpec() {
 
     data class Token(val value: String)
 
-    val token = Token("1")
-
     val tokenLens: Lens<Token, String> = Lens(
             get = { token: Token -> token.value },
             set = { value: String -> { token: Token -> token.copy(value = value) } }
     )
 
     init {
-
-        "Modifying the name of a employees company street" {
-            forAll({ newToken: String ->
-                val modifiedToken = tokenLens.modify({ newToken }, token)
-                modifiedToken.value == newToken
+        "Can set a new value for a type" {
+            forAll({ newValue: String ->
+                val modifiedToken = tokenLens.set(newValue)(Token("old value"))
+                modifiedToken.value == newValue
             })
         }
 
+        "Can get a value from a type" {
+            forAll({ value: String ->
+                val getValue = tokenLens.get(Token(value))
+                getValue == value
+            })
+        }
+
+        "Can modify a value of a type" {
+            forAll({ modifiedValue: String ->
+                val modifiedToken = tokenLens.modify({ modifiedValue }, Token("old value"))
+                modifiedToken.value == modifiedValue
+            })
+        }
     }
 
 }
