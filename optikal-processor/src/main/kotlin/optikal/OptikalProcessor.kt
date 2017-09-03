@@ -1,50 +1,65 @@
 package optikal
 
-import kotlinx.coroutines.experimental.CommonPool
-import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.runBlocking
+import me.eugeniomarletti.kotlin.metadata.KotlinClassMetadata
+import me.eugeniomarletti.kotlin.metadata.isDataClass
+import me.eugeniomarletti.kotlin.metadata.kaptGeneratedOption
+import me.eugeniomarletti.kotlin.metadata.kotlinMetadata
 import me.eugeniomarletti.kotlin.processing.KotlinAbstractProcessor
 import java.io.File
 import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.SourceVersion
 import javax.lang.model.element.Element
 import javax.lang.model.element.TypeElement
+import javax.lang.model.element.VariableElement
+import javax.lang.model.type.TypeKind
 
 class OptikalProcessor : KotlinAbstractProcessor() {
 
+    private val annotatedLenses = mutableListOf<AnnotatedLens.Element>()
+
     override fun getSupportedSourceVersion(): SourceVersion = SourceVersion.latestSupported()
 
-    override fun getSupportedAnnotationTypes() = setOf(Lenses::class.java.canonicalName)
+    override fun getSupportedAnnotationTypes() = setOf(lensesAnnotationClass.canonicalName)
+
+    class KnownException(message: String) : RuntimeException(message) {
+        override val message: String get() = super.message as String
+        operator fun component1() = message
+    }
 
     override fun process(annotations: Set<TypeElement>, roundEnv: RoundEnvironment): Boolean {
-        val dir = createKaptGeneratedDir()
+        if (!roundEnv.errorRaised()) {
+            try {
+                annotatedLenses += roundEnv
+                        .getElementsAnnotatedWith(lensesAnnotationClass)
+                        .map(this::evalAnnotatedElement)
+                        .map { annotatedLens ->
+                            when (annotatedLens) {
+                                is AnnotatedLens.InvalidElement -> throw KnownException(annotatedLens.reason)
+                                is AnnotatedLens.Element -> annotatedLens
+                            }
+                        }
 
-        roundEnv.getElementsAnnotatedWith(Lenses::class.java)
-                .takeIf(Set<Element>::isNotEmpty)
-                ?.let(::LensesFileGenerator)
-                ?.generate(dir, messager)
-
-        return true
-    }
-
-    private fun createKaptGeneratedDir() = File(processingEnv.options["kapt.kotlin.generated"]).apply {
-        if (!parentFile.exists()) {
-            parentFile.mkdirs()
+                if (roundEnv.processingOver()) {
+                    val generatedDir = File(options[kaptGeneratedOption].let(::File), lensesAnnotationClass.simpleName).also { it.mkdirs() }
+                    LensesFileGenerator(annotatedLenses, generatedDir).generate()
+                }
+            } catch (e: KnownException) {
+                messager.logE(e.message)
+            }
         }
+
+        return false
     }
 
-}
+    fun evalAnnotatedElement(element: Element): AnnotatedLens = when {
+        element.kotlinMetadata !is KotlinClassMetadata -> AnnotatedLens.InvalidElement("""
+            |Cannot use @Lenses on ${element.enclosingElement}.${element.simpleName}.
+            |It can only be used on data classes.""".trimMargin())
 
-internal fun <A> Collection<A>.pforEach(f: suspend (A) -> Unit): List<Unit> = runBlocking {
-    map { async(CommonPool) { f(it) } }.map { it.await() }
-}
+        (element.kotlinMetadata as KotlinClassMetadata).data.classProto.isDataClass ->
+            AnnotatedLens.Element(element as TypeElement, element.enclosedElements.filter { it.asType().kind == TypeKind.DECLARED }.map { it as VariableElement })
 
-internal fun <A, B> Collection<A>.pmap(f: suspend (A) -> B): List<B> = runBlocking {
-    map { async(CommonPool) { f(it) } }.map { it.await() }
-}
-
-internal fun <A, B> Collection<A>.pflatMap(f: suspend (A) -> List<B>): List<B> = runBlocking {
-    flatMap {
-        async(CommonPool) { f(it) }.await()
+        else -> AnnotatedLens.InvalidElement("${element.enclosingElement}.${element.simpleName} cannot be annotated with @Lenses")
     }
+
 }

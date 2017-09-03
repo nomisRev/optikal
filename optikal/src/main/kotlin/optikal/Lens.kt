@@ -1,6 +1,6 @@
 package optikal
 
-import kategory.Option
+import kategory.*
 
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.CLASS)
@@ -13,15 +13,67 @@ annotation class Lenses
  *
  * @param A the source of a [Lens]
  * @param B the target of a [Lens]
- * @param get from an `A` we can extract a `B`
- * @param set replace the target value by `B` in an `A` so we obtain another modified `A`
+ * @property get from an `A` we can extract a `B`
+ * @property set replace the target value by `B` in an `A` so we obtain another modified `A`
+ * @constructor Creates a Lens of type `A` with target `B`.
  */
 data class Lens<A, B>(val get: (A) -> B, val set: (B) -> (A) -> A) {
 
     /**
      * Modify the target of a [Lens] using a function `(B) -> B`
      */
-    fun modify(f: (B) -> B, a: A) = set(f(get(a)))(a)
+    inline fun modify(f: (B) -> B, a: A) = set(f(get(a)))(a)
+
+    /**
+     * Modify the target of a [Lens] using Functor function
+     */
+    inline fun <reified F> modifyF(functor: Functor<F> = functor(), f: (A) -> HK<F, B>, a: A): HK<F, A> =
+            functor.map(f(a), { set(it)(a) })
+
+    /**
+     * Find if the target satisfies the predicate
+     */
+    inline fun find(crossinline p: (B) -> Boolean): (A) -> Option<B> = {
+        val a = get(it)
+        if (p(a)) Option.Some(a) else Option.None
+    }
+
+    /**
+     * Checks if the target of a [Lens] satisfies the predicate
+     */
+    inline fun exist(crossinline p: (B) -> Boolean): (A) -> Boolean = { p(get(it)) }
+
+    /**
+     * join two [Lens] with the same target
+     */
+    fun <C> choice(other: Lens<C, B>): Lens<Either<A, C>, B> = Lens(
+            { it.fold(get, other.get) },
+            { b -> { it.bimap(set(b), other.set(b)) } }
+    )
+
+    /**
+     * Pair two disjoint [Lens]
+     */
+    fun <C, D> split(other: Lens<C, D>): Lens<Pair<A, C>, Pair<B, D>> = Lens(
+            { (a, c) -> get(a) to other.get(c) },
+            { (b, d) -> { (a, c) -> set(b)(a) to other.set(d)(c) } }
+    )
+
+    /**
+     * Convenience method to create a pair of the target and a type C
+     */
+    fun <C> first(): Lens<Pair<A, C>, Pair<B, C>> = Lens(
+            { (a, c) -> get(a) to c },
+            { (b, c) -> { (a, _) -> set(b)(a) to c } }
+    )
+
+    /**
+     * Convenience method to create a pair of a type C and the target
+     */
+    fun <C> second(): Lens<Pair<C, A>, Pair<C, B>> = Lens(
+            { (c, a) -> c to get(a) },
+            { (c, b) -> { (_, a) -> c to set(b)(a) } }
+    )
 
     /**
      * Compose a [Lens] with another [Lens]
@@ -36,16 +88,4 @@ data class Lens<A, B>(val get: (A) -> B, val set: (B) -> (A) -> A) {
      */
     operator fun <C> plus(other: Lens<B, C>): Lens<A, C> = composeLens(other)
 
-    /**
-     * Checks if the target of a [Lens] satisfies the predicate
-     */
-    inline fun exist(crossinline p: (B) -> Boolean): (A) -> Boolean = { p(get(it)) }
-
-    /**
-     * Find if the target satisfies the predicate
-     */
-    inline fun find(crossinline p: (B) -> Boolean): (A) -> Option<B> = {
-        val a = get(it)
-        if (p(a)) Option.Some(a) else Option.None
-    }
 }
