@@ -72,6 +72,16 @@ abstract class Prism<A, B> {
             { reverseGet(other.reverseGet(it)) }
     )
 
+    /** compose a [Prism] with a [Optional] */
+    infix fun <C> composeOptional(other: Optional<B, C>): Optional<A, C> =
+            asOptional() composeOptional other
+
+    /** view a [Prism] as an [Optional] */
+    fun asOptional(): Optional<A,B> = Optional(
+            { a -> getOption(a) },
+            { b -> set(b) }
+    )
+
     /**
      * Set the target of a [Prism] with a value
      */

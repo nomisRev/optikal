@@ -94,6 +94,16 @@ abstract class Lens<A, B> {
             { c -> { a -> set(l.set(c)(get(a)))(a) } }
     )
 
+    /** compose a [Lens] with a [Optional] */
+    infix fun <C> composeOptional(other: Optional<B, C>) =
+            asOptional() composeOptional other
+
+    /** view a [Lens] as an [Optional] */
+    fun asOptional(): Optional<A, B> = Optional(
+            { a -> Option.Some(get(a)) },
+            { b -> set(b) }
+    )
+
     /**
      * plus operator overload to compose lenses
      */
