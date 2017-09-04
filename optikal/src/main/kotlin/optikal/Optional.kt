@@ -17,7 +17,7 @@ import kategory.Option
  * @property set replace the target value by `B` in an `A` so we obtain another modified `A`
  * @constructor Creates a Lens of type `A` with target `B`.
  */
-abstract class Optional<A, B>{
+abstract class Optional<A, B> {
 
     /** get the target of a [Optional] or nothing if there is no target */
     abstract fun getOption(a: A): Option<B>
@@ -26,8 +26,8 @@ abstract class Optional<A, B>{
     abstract fun set(b: B): (A) -> (A)
 
     companion object {
-        operator fun <A, B> invoke(getOption: (A) -> Option<B>, set: (B) -> (A) -> (A)) = object: Optional<A, B>() {
-            override fun getOption(a: A): Option<B>  = getOption(a)
+        operator fun <A, B> invoke(getOption: (A) -> Option<B>, set: (B) -> (A) -> (A)) = object : Optional<A, B>() {
+            override fun getOption(a: A): Option<B> = getOption(a)
 
             override fun set(b: B): (A) -> A = set(b)
         }
@@ -43,7 +43,7 @@ abstract class Optional<A, B>{
     inline fun modify(crossinline f: (B) -> B): (A) -> A = { a -> getOption(a).fold({ a }, { set(f(it))(a) }) }
 
     /** modify polymorphically the target of a [Optional] with an Applicative function */
-    inline fun <reified F> modifyF(FA: Applicative<F> = kategory.applicative(), crossinline f: (B) -> HK<F, B>, a: A): HK<F, A>  =
+    inline fun <reified F> modifyF(FA: Applicative<F> = kategory.applicative(), crossinline f: (B) -> HK<F, B>, a: A): HK<F, A> =
             getOrModify(a).fold(
                     { FA.pure(it) },
                     { FA.map(f(it), { set(it)(a) }) }
@@ -53,12 +53,12 @@ abstract class Optional<A, B>{
      * modify polymorphically the target of a [Optional] with a function.
      * return empty if the [Optional] is not matching
      */
-    fun modifiyOption(f: (B) -> B): (A) -> Option<A> = { a -> getOption(a).map({ set(f(it))(a) })}
+    fun modifiyOption(f: (B) -> B): (A) -> Option<A> = { a -> getOption(a).map({ set(f(it))(a) }) }
 
     /** compose a [Optional] with a [Optional] */
     infix fun <C> composeOptional(other: Optional<B, C>): Optional<A, C> = Optional(
-            { a -> getOption(a).flatMap { other.getOption(it) }},
-            { c -> modify(other.set(c))}
+            { a -> getOption(a).flatMap { other.getOption(it) } },
+            { c -> modify(other.set(c)) }
     )
 
     /** compose a [Optional] with a [Prism] */
