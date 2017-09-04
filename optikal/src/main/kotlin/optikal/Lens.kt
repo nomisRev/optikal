@@ -1,14 +1,14 @@
 package optikal
 
-import kategory.*
-
-@Retention(AnnotationRetention.SOURCE)
-@Target(AnnotationTarget.CLASS)
-annotation class Lenses
+import kategory.Either
+import kategory.Functor
+import kategory.HK
+import kategory.Option
+import kategory.functor
 
 /**
  * A [Lens] can be seen as a pair of functions `get: (A) -> B` and `set: (B) -> (A) -> A`
- * - `get: (A) -> B` i.e. from an `A`, we can extract an `P`
+ * - `get: (A) -> B` i.e. from an `A`, we can extract an `B`
  * - `set: (B) -> (A) -> A` i.e. if we replace target value by `B` in an `A`, we obtain another modified `A`
  *
  * @param A the source of a [Lens]
@@ -17,18 +17,29 @@ annotation class Lenses
  * @property set replace the target value by `B` in an `A` so we obtain another modified `A`
  * @constructor Creates a Lens of type `A` with target `B`.
  */
-data class Lens<A, B>(val get: (A) -> B, val set: (B) -> (A) -> A) {
+abstract class Lens<A, B> {
+
+    abstract fun get(a: A): B
+    abstract fun set(b: B): (A) -> A
+
+    companion object {
+        operator fun <A, B> invoke(get: (A) -> B, set: (B) -> (A) -> A) = object : Lens<A, B>() {
+            override fun get(a: A): B = get(a)
+
+            override fun set(b: B): (A) -> A = set(b)
+        }
+    }
 
     /**
      * Modify the target of a [Lens] using a function `(B) -> B`
      */
-    inline fun modify(f: (B) -> B, a: A) = set(f(get(a)))(a)
+    inline fun modify(f: (B) -> B, a: A): A = set(f(get(a)))(a)
 
     /**
      * Modify the target of a [Lens] using Functor function
      */
-    inline fun <reified F> modifyF(functor: Functor<F> = functor(), f: (A) -> HK<F, B>, a: A): HK<F, A> =
-            functor.map(f(a), { set(it)(a) })
+    inline fun <reified F> modifyF(FF: Functor<F> = functor(), f: (B) -> HK<F, B>, a: A): HK<F, A> =
+            FF.map(f(get(a)), { set(it)(a) })
 
     /**
      * Find if the target satisfies the predicate
@@ -44,10 +55,10 @@ data class Lens<A, B>(val get: (A) -> B, val set: (B) -> (A) -> A) {
     inline fun exist(crossinline p: (B) -> Boolean): (A) -> Boolean = { p(get(it)) }
 
     /**
-     * join two [Lens] with the same target
+     * Join two [Lens] with the same target
      */
     fun <C> choice(other: Lens<C, B>): Lens<Either<A, C>, B> = Lens(
-            { it.fold(get, other.get) },
+            { it.fold(this::get, other::get) },
             { b -> { it.bimap(set(b), other.set(b)) } }
     )
 
@@ -79,8 +90,8 @@ data class Lens<A, B>(val get: (A) -> B, val set: (B) -> (A) -> A) {
      * Compose a [Lens] with another [Lens]
      */
     infix fun <C> composeLens(l: Lens<B, C>): Lens<A, C> = Lens(
-            get = { a -> l.get(get(a)) },
-            set = { c -> { a -> set(l.set(c)(get(a)))(a) } }
+            { a -> l.get(get(a)) },
+            { c -> { a -> set(l.set(c)(get(a)))(a) } }
     )
 
     /**

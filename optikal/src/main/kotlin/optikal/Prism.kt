@@ -1,10 +1,14 @@
 package optikal
 
-import kategory.*
-
-@Retention(AnnotationRetention.SOURCE)
-@Target(AnnotationTarget.CLASS)
-annotation class Prisms
+import kategory.Applicative
+import kategory.Option
+import kategory.Either
+import kategory.HK
+import kategory.applicative
+import kategory.flatMap
+import kategory.identity
+import kategory.left
+import kategory.right
 
 /**
  * A [Prism] can be seen as a pair of functions: `reverseGet : B -> A` and `getOrModify: A -> Either<A,B>`
@@ -20,7 +24,18 @@ annotation class Prisms
  * @property reverseGet get the target of a [Prism] or return the original value
  * @constructor Creates a Lens of type `A` with target `B`
  */
-data class Prism<A, B>(val getOrModify: (A) -> Either<A, B>, val reverseGet: (B) -> A) {
+abstract class Prism<A, B> {
+
+    abstract fun getOrModify(a: A): Either<A, B>
+    abstract fun reverseGet(b: B): A
+
+    companion object {
+        operator fun <A,B> invoke(getOrModify: (A) -> Either<A, B>, reverseGet: (B) -> A) = object : Prism<A,B>() {
+            override fun getOrModify(a: A): Either<A, B> = getOrModify(a)
+
+            override fun reverseGet(b: B): A = reverseGet(b)
+        }
+    }
 
     /**
      * Get the target or nothing if `A` does not match the target
@@ -30,9 +45,9 @@ data class Prism<A, B>(val getOrModify: (A) -> Either<A, B>, val reverseGet: (B)
     /**
      * Modify the target of a [Prism] with an Applicative function
      */
-    inline fun <reified F> modifyF(applicative: Applicative<F> = applicative(), crossinline f: (B) -> HK<F, B>, a: A): HK<F, A> = getOrModify(a).fold(
-            { applicative.pure(it) },
-            { applicative.map(f(it), reverseGet) }
+    inline fun <reified F> modifyF(FA: Applicative<F> = applicative(), crossinline f: (B) -> HK<F, B>, a: A): HK<F, A> = getOrModify(a).fold(
+            { FA.pure(it) },
+            { FA.map(f(it), this::reverseGet) }
     )
 
     /**
@@ -45,7 +60,7 @@ data class Prism<A, B>(val getOrModify: (A) -> Either<A, B>, val reverseGet: (B)
     /**
      * Modify the target of a [Prism] with a function
      */
-    inline fun modifyOption(f: (B) -> B): (A) -> Option<A> = { getOption(it).map(reverseGet) }
+    inline fun modifyOption(crossinline f: (B) -> B): (A) -> Option<A> = { getOption(it).map { b -> reverseGet(f(b)) } }
 
     /**
      * Set the target of a [Prism] with a value
@@ -123,5 +138,5 @@ fun <A, B, C> Prism<A, B>.left(): Prism<Either<A, C>, Either<B, C>> = Prism(
  */
 fun <A, B, C> Prism<A, B>.right(): Prism<Either<C, A>, Either<C, B>> = Prism(
         { it.fold({ c -> Either.Right(c.left()) }, { a -> getOrModify(a).bimap({ it.right() }, { it.right() }) }) },
-        { it.map(reverseGet) }
+        { it.map(this::reverseGet) }
 )
