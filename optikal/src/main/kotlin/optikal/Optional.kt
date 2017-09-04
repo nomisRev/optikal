@@ -5,7 +5,6 @@ import kategory.Either
 import kategory.HK
 import kategory.Option
 
-
 /**
  * A [Optional] can be seen as a pair of functions `getOption: (A) -> Option<B>` and `set: (B) -> (A) -> A`
  *
@@ -66,7 +65,6 @@ abstract class Optional<A, B> {
 
     /** compose a [Optional] with a [Lens] */
     infix fun <C> composeLens(other: Lens<B, C>): Optional<B, C> = other.asOptional()
-
 
     /** plus operator overload to compose optionals */
     operator fun <C> plus(o: Optional<B, C>): Optional<A, C> = composeOptional(o)
