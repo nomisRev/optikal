@@ -66,6 +66,10 @@ abstract class Optional<A, B> {
     /** compose a [Optional] with a [Lens] */
     infix fun <C> composeLens(other: Lens<B, C>): Optional<B, C> = other.asOptional()
 
+    /** compose an [Iso] as an [Prism] */
+    fun <C> composeIso(other: Iso<B, C>): Optional<A, C> =
+            composeOptional(other.asOptional())
+
     /** plus operator overload to compose optionals */
     operator fun <C> plus(o: Optional<B, C>): Optional<A, C> = composeOptional(o)
 }

@@ -1,14 +1,6 @@
 package optikal
 
-import kategory.Applicative
-import kategory.Option
-import kategory.Either
-import kategory.HK
-import kategory.applicative
-import kategory.flatMap
-import kategory.identity
-import kategory.left
-import kategory.right
+import kategory.*
 
 /**
  * A [Prism] can be seen as a pair of functions: `reverseGet : B -> A` and `getOrModify: A -> Either<A,B>`
@@ -30,7 +22,7 @@ abstract class Prism<A, B> {
     abstract fun reverseGet(b: B): A
 
     companion object {
-        operator fun <A,B> invoke(getOrModify: (A) -> Either<A, B>, reverseGet: (B) -> A) = object : Prism<A,B>() {
+        operator fun <A, B> invoke(getOrModify: (A) -> Either<A, B>, reverseGet: (B) -> A) = object : Prism<A, B>() {
             override fun getOrModify(a: A): Either<A, B> = getOrModify(a)
 
             override fun reverseGet(b: B): A = reverseGet(b)
@@ -77,10 +69,14 @@ abstract class Prism<A, B> {
             asOptional() composeOptional other
 
     /** view a [Prism] as an [Optional] */
-    fun asOptional(): Optional<A,B> = Optional(
+    fun asOptional(): Optional<A, B> = Optional(
             { a -> getOption(a) },
             { b -> set(b) }
     )
+
+    /** compose an [Iso] as an [Prism] */
+    fun <C> composeIso(other: Iso<B, C>): Prism<A, C> =
+            composePrism(other.asPrism())
 
     /**
      * Set the target of a [Prism] with a value
@@ -127,7 +123,6 @@ abstract class Prism<A, B> {
             { (c, a) -> getOrModify(a).bimap({ c to it }, { c to it }) },
             { (c, b) -> c to reverseGet(b) }
     )
-
 }
 
 /**
