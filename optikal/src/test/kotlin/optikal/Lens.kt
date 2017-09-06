@@ -68,12 +68,20 @@ class LensTest : StringSpec() {
             })
         }
 
-        "ModifyF should modify the target using a Functor function" {
-//            forAll({ modifiedValue: String ->
-//                tokenLens.modifyF(Option.functor(), f = { getVal(Option.applicative(), a = modifiedValue) }, a = token)
-//                        .exists(f = { it.value == modifiedValue })
-//            })
-        }
+//<<<<<<< Updated upstream
+//        "ModifyF should modify the target using a Functor function" {
+//=======
+////        "ModifyF should modify the target using a Functor function" {
+//>>>>>>> Stashed changes
+////            forAll({ modifiedValue: String ->
+////                tokenLens.modifyF(Option.functor(), f = { getVal(Option.applicative(), a = modifiedValue) }, a = token)
+////                        .exists(f = { it.value == modifiedValue })
+////            })
+//<<<<<<< Updated upstream
+//        }
+//=======
+////        }
+//>>>>>>> Stashed changes
 
         "Finding a target using a predicate within a Lens should be wrapped in the correct option result" {
             forAll({ predicate: Boolean ->
