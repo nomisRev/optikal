@@ -19,4 +19,4 @@ dependencies {
     testCompile files(Jvm.current().getToolsJar())
 }
 
-build.dependsOn ':detekt'
+//build.dependsOn ':detekt'

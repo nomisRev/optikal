@@ -51,21 +51,21 @@ class OptikalProcessor : KotlinAbstractProcessor() {
                             }
                         }
 
-//                annotatedIsos += roundEnv
-//                        .getElementsAnnotatedWith(isoAnnotationClass)
-//                        .map(this::evalAnnotatedIsoElement)
-//                        .map { annotatedIso ->
-//                            when (annotatedIso) {
-//                                is AnnotatedIso.InvalidElement -> throw KnownException(annotatedIso.reason)
-//                                is AnnotatedIso.Element -> annotatedIso
-//                            }
-//                        }
+                annotatedIsos += roundEnv
+                        .getElementsAnnotatedWith(isoAnnotationClass)
+                        .map(this::evalAnnotatedIsoElement)
+                        .map { annotatedIso ->
+                            when (annotatedIso) {
+                                is AnnotatedIso.InvalidElement -> throw KnownException(annotatedIso.reason)
+                                is AnnotatedIso.Element -> annotatedIso
+                            }
+                        }
 
                 if (roundEnv.processingOver()) {
                     val generatedDir = File(options[kaptGeneratedOption].let(::File), lensesAnnotationClass.simpleName.toLowerCase()).also { it.mkdirs() }
                     LensesFileGenerator(annotatedLenses, generatedDir).generate()
                     PrismsFileGenerator(annotatedPrisms, generatedDir).generate()
-//                    IsosFileGenerator(annotatedIsos, generatedDir).generate()
+                    IsosFileGenerator(annotatedIsos, generatedDir).generate()
                 }
             } catch (e: KnownException) {
                 messager.logE(e.message)
@@ -110,7 +110,7 @@ class OptikalProcessor : KotlinAbstractProcessor() {
             |It can only be used on data classes.""".trimMargin())
 
         (element.kotlinMetadata as KotlinClassMetadata).data.classProto.isDataClass ->
-            AnnotatedIso.Element(element as TypeElement, element.enclosedElements.filter { it.asType().kind == TypeKind.DECLARED }.map { it as VariableElement })
+            AnnotatedIso.Element(element as TypeElement, element.enclosedElements.filter { listOf<TypeKind>(TypeKind.DECLARED, TypeKind.INT, TypeKind.LONG, TypeKind.DOUBLE).contains(it.asType().kind) }.map { it as VariableElement })
 
         else -> AnnotatedIso.InvalidElement("${element.enclosingElement}.${element.simpleName} cannot be annotated with @Iso")
     }

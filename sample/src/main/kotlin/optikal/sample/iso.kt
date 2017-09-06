@@ -1,9 +1,12 @@
 package optikal.sample
 
 import optikal.Iso
+import optikal.Isos
 import java.util.*
 
-data class Person(val name: String, val age: Int)
+@Isos data class Person2(val name: String, val age: Int, val lolo: Long, val doble: Double)
+
+@Isos data class Person(val name: String, val age: Int)
 
 val personToTuple = Iso<Person, Pair<String, Int>>(
         get = { person -> Pair(person.name, person.age) },
@@ -23,5 +26,5 @@ fun main(args: Array<String>) {
     val toVectorReversed = listToVector<Int>().reverse().get(Vector<Int>(listOf(1, 2, 3, 4, 5)))
     println("${toVectorReversed.javaClass.simpleName}: $toVectorReversed")
 
-    println(stringToList.modify { it.drop(1) } ("Hello"))
+    println(stringToList.modify { it.drop(1) }("Hello"))
 }
