@@ -2,6 +2,9 @@ package optikal
 
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KotlinFile
+import com.squareup.kotlinpoet.ParameterizedTypeName
+import com.squareup.kotlinpoet.asClassName
+import com.squareup.kotlinpoet.asTypeName
 import java.io.File
 
 class LensesFileGenerator(
@@ -22,6 +25,7 @@ class LensesFileGenerator(
                 val variableName = variable.simpleName
 
                 FunSpec.builder("$className${variableName.toString().capitalize()}")
+                        .returns(ParameterizedTypeName.get(Lens::class.asClassName(), annotatedLens.type.asType().asTypeName(), variable.asType().asTypeName()))
                         .addStatement(
                                 """return %T(
                                    |        get = { $className: %T -> $className.$variableName },
