@@ -1,10 +1,6 @@
 package optikal
 
-import kategory.Either
-import kategory.Functor
-import kategory.HK
-import kategory.Option
-import kategory.functor
+import kategory.*
 
 /**
  * A [Lens] can be seen as a pair of functions `get: (A) -> B` and `set: (B) -> (A) -> A`
@@ -103,6 +99,10 @@ abstract class Lens<A, B> {
             { a -> Option.Some(get(a)) },
             { b -> set(b) }
     )
+
+    /** compose an [Iso] as an [Prism] */
+    fun <C> composeIso(other: Iso<B, C>): Lens<A, C> =
+            composeLens(other.asLens())
 
     /**
      * plus operator overload to compose lenses

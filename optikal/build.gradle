@@ -5,4 +5,4 @@ dependencies {
     testCompile('io.kategory:kategory:0.3.5')
 }
 
-build.dependsOn ':detekt'
+//build.dependsOn ':detekt'

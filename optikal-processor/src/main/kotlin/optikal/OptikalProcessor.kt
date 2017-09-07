@@ -1,10 +1,6 @@
 package optikal
 
-import me.eugeniomarletti.kotlin.metadata.KotlinClassMetadata
-import me.eugeniomarletti.kotlin.metadata.isDataClass
-import me.eugeniomarletti.kotlin.metadata.kaptGeneratedOption
-import me.eugeniomarletti.kotlin.metadata.kotlinMetadata
-import me.eugeniomarletti.kotlin.metadata.modality
+import me.eugeniomarletti.kotlin.metadata.*
 import me.eugeniomarletti.kotlin.processing.KotlinAbstractProcessor
 import org.jetbrains.kotlin.serialization.ProtoBuf
 import java.io.File
@@ -14,12 +10,15 @@ import javax.lang.model.element.Element
 import javax.lang.model.element.TypeElement
 import javax.lang.model.element.VariableElement
 import javax.lang.model.type.TypeKind
+import javax.tools.Diagnostic
 
 class OptikalProcessor : KotlinAbstractProcessor() {
 
     private val annotatedLenses = mutableListOf<AnnotatedLens.Element>()
 
     private val annotatedPrisms = mutableListOf<AnnotatedPrism.Element>()
+
+    private val annotatedIsos = mutableListOf<AnnotatedIso.Element>()
 
     override fun getSupportedSourceVersion(): SourceVersion = SourceVersion.latestSupported()
 
@@ -53,10 +52,21 @@ class OptikalProcessor : KotlinAbstractProcessor() {
                             }
                         }
 
+                annotatedIsos += roundEnv
+                        .getElementsAnnotatedWith(isoAnnotationClass)
+                        .map(this::evalAnnotatedIsoElement)
+                        .map { annotatedIso ->
+                            when (annotatedIso) {
+                                is AnnotatedIso.InvalidElement -> throw KnownException(annotatedIso.reason)
+                                is AnnotatedIso.Element -> annotatedIso
+                            }
+                        }
+
                 if (roundEnv.processingOver()) {
                     val generatedDir = File(options[kaptGeneratedOption].let(::File), lensesAnnotationClass.simpleName.toLowerCase()).also { it.mkdirs() }
                     LensesFileGenerator(annotatedLenses, generatedDir).generate()
                     PrismsFileGenerator(annotatedPrisms, generatedDir).generate()
+                    IsosFileGenerator(annotatedIsos, generatedDir).generate()
                 }
             } catch (e: KnownException) {
                 messager.logE(e.message)
@@ -95,4 +105,15 @@ class OptikalProcessor : KotlinAbstractProcessor() {
         else -> AnnotatedPrism.InvalidElement("${element.enclosingElement}.${element.simpleName} cannot be annotated with @Prisms")
     }
 
+    fun evalAnnotatedIsoElement(element: Element): AnnotatedIso = when {
+        element.kotlinMetadata !is KotlinClassMetadata -> AnnotatedIso.InvalidElement("""
+            |Cannot use @Iso on ${element.enclosingElement}.${element.simpleName}.
+            |It can only be used on data classes.""".trimMargin())
+
+
+        (element.kotlinMetadata as KotlinClassMetadata).data.classProto.isDataClass ->
+            AnnotatedIso.Element(element as TypeElement, element.enclosedElements.filter { it.asType().kind == TypeKind.DECLARED || it.asType().kind.isPrimitive }.map { it as VariableElement })
+
+        else -> AnnotatedIso.InvalidElement("${element.enclosingElement}.${element.simpleName} cannot be annotated with @Iso")
+    }
 }
