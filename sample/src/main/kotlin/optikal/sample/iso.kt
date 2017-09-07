@@ -8,6 +8,8 @@ import java.util.*
 
 @Isos data class Person(val name: String, val age: Int)
 
+//@Isos data class ShittyDataclass(val integere: Int, val doublee: Double, val longe: Long, val stringe: String, val booleane: Boolean, val arraye: Array<String>)
+
 val personToTuple = Iso<Person, Pair<String, Int>>(
         get = { person -> Pair(person.name, person.age) },
         reverseGet = { (first, second) -> Person(first, second) })

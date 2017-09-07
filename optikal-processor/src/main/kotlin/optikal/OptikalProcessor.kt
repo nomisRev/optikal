@@ -10,6 +10,7 @@ import javax.lang.model.element.Element
 import javax.lang.model.element.TypeElement
 import javax.lang.model.element.VariableElement
 import javax.lang.model.type.TypeKind
+import javax.tools.Diagnostic
 
 class OptikalProcessor : KotlinAbstractProcessor() {
 
@@ -109,8 +110,9 @@ class OptikalProcessor : KotlinAbstractProcessor() {
             |Cannot use @Iso on ${element.enclosingElement}.${element.simpleName}.
             |It can only be used on data classes.""".trimMargin())
 
+
         (element.kotlinMetadata as KotlinClassMetadata).data.classProto.isDataClass ->
-            AnnotatedIso.Element(element as TypeElement, element.enclosedElements.filter { listOf<TypeKind>(TypeKind.DECLARED, TypeKind.INT, TypeKind.LONG, TypeKind.DOUBLE).contains(it.asType().kind) }.map { it as VariableElement })
+            AnnotatedIso.Element(element as TypeElement, element.enclosedElements.filter { it.asType().kind == TypeKind.DECLARED || it.asType().kind.isPrimitive }.map { it as VariableElement })
 
         else -> AnnotatedIso.InvalidElement("${element.enclosingElement}.${element.simpleName} cannot be annotated with @Iso")
     }
