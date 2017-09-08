@@ -5,12 +5,4 @@ jdk:
   - oraclejdk8
 
 script:
-  - ./gradlew clean build :sample:runAnk
-  - ./gradlew codeCoverageReport
-
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
-
-deploy:
-  provider: script
-  script: ./gradlew :optikal:upload :optikal-processor:upload
+  - ./gradlew clean build
