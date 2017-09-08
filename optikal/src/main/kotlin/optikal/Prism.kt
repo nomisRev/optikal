@@ -4,8 +4,10 @@ import kategory.Applicative
 import kategory.Option
 import kategory.Either
 import kategory.HK
+import kategory.Monoid
 import kategory.applicative
 import kategory.flatMap
+import kategory.getOrElse
 import kategory.identity
 import kategory.left
 import kategory.right
@@ -30,7 +32,7 @@ abstract class Prism<A, B> {
     abstract fun reverseGet(b: B): A
 
     companion object {
-        operator fun <A,B> invoke(getOrModify: (A) -> Either<A, B>, reverseGet: (B) -> A) = object : Prism<A,B>() {
+        operator fun <A, B> invoke(getOrModify: (A) -> Either<A, B>, reverseGet: (B) -> A) = object : Prism<A, B>() {
             override fun getOrModify(a: A): Either<A, B> = getOrModify(a)
 
             override fun reverseGet(b: B): A = reverseGet(b)
@@ -75,12 +77,6 @@ abstract class Prism<A, B> {
     /** compose a [Prism] with a [Optional] */
     infix fun <C> composeOptional(other: Optional<B, C>): Optional<A, C> =
             asOptional() composeOptional other
-
-    /** view a [Prism] as an [Optional] */
-    fun asOptional(): Optional<A,B> = Optional(
-            { a -> getOption(a) },
-            { b -> set(b) }
-    )
 
     /**
      * Set the target of a [Prism] with a value
@@ -127,6 +123,19 @@ abstract class Prism<A, B> {
             { (c, a) -> getOrModify(a).bimap({ c to it }, { c to it }) },
             { (c, b) -> c to reverseGet(b) }
     )
+
+    /**
+     * View a [Prism] as an [Optional]
+     */
+    fun asOptional(): Optional<A, B> = Optional(
+            { a -> getOption(a) },
+            { b -> set(b) }
+    )
+
+    fun asFold(): Fold<A, B> = object : Fold<A, B>() {
+        override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R =
+                getOption(a).map(f).getOrElse { M.empty() }
+    }
 
 }
 

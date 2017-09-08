@@ -1,6 +1,7 @@
 package optikal
 
 import kategory.Either
+import kategory.Monoid
 import kategory.Option
 import kategory.Tuple2
 import kategory.compose
@@ -83,5 +84,9 @@ abstract class Getter<A, B> {
     }
 
     operator fun <C> plus(other: Getter<B, C>): Getter<A,C> = composeGetter(other)
+
+    fun asFold() = object : Fold<A,B>() {
+        override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R = f(get(a))
+    }
 
 }
