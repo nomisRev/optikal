@@ -4,8 +4,10 @@ import kategory.Applicative
 import kategory.Const
 import kategory.ConstHK
 import kategory.HK
+import kategory.Monoid
 import kategory.applicative
 import kategory.map
+import kategory.monoid
 import kategory.value
 
 abstract class Traversal<A, B> {
@@ -31,7 +33,8 @@ abstract class Traversal<A, B> {
     /**
      * Map each target to a Monoid and combine the results
      */
-    inline fun <reified M> foldMap(FA: Applicative<HK<ConstHK, M>> = applicative(), crossinline f: (B) -> M, a: A): M = modifyF(FA, { b ->
+    @Suppress("UNUSED_PARAMETER")
+    inline fun <reified R> foldMap(FA: Applicative<HK<ConstHK, R>> = applicative(), M: Monoid<R> = monoid(), crossinline f: (B) -> R, a: A): R = modifyF(FA, { b ->
         Const(f(b))
     }, a).value()
 
