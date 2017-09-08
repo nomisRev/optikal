@@ -3,7 +3,11 @@ package optikal
 import kategory.Applicative
 import kategory.Either
 import kategory.HK
+import kategory.Monoid
 import kategory.Option
+import kategory.getOrElse
+import kategory.identity
+import kategory.none
 
 /**
  * A [Optional] can be seen as a pair of functions `getOption: (A) -> Option<B>` and `set: (B) -> (A) -> A`
@@ -30,6 +34,12 @@ abstract class Optional<A, B> {
 
             override fun set(b: B): (A) -> A = set(b)
         }
+
+        fun <A, B> void() = Optional<A, B>(
+                { _ -> none() },
+                { _ -> { b -> identity(b) } }
+        )
+
     }
 
     /** get the target of a [Optional] or return the original value while allowing the type to change if it does not match */
@@ -74,5 +84,10 @@ abstract class Optional<A, B> {
     operator fun <C> plus(o: Prism<B, C>): Optional<A, C> = composePrism(o)
 
     operator fun <C> plus(o: Lens<B, C>): Optional<A, C> = composeLens(o)
+
+    fun asFold() = object : Fold<A, B>() {
+        override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R =
+                getOption(a).map(f).getOrElse { M.empty() }
+    }
 
 }

@@ -3,6 +3,7 @@ package optikal
 import kategory.Either
 import kategory.Functor
 import kategory.HK
+import kategory.Monoid
 import kategory.Option
 import kategory.functor
 
@@ -95,13 +96,13 @@ abstract class Lens<A, B> {
     )
 
     /** compose a [Lens] with a [Optional] */
-    infix fun <C> composeOptional(other: Optional<B, C>): Optional<A,C> =
+    infix fun <C> composeOptional(other: Optional<B, C>): Optional<A, C> =
             asOptional() composeOptional other
 
     /**
      * Compose a [Lens] with a [Getter]
      */
-    infix fun <C> composeGetter(other: Getter<B, C>): Getter<A,C> =
+    infix fun <C> composeGetter(other: Getter<B, C>): Getter<A, C> =
             asGetter() composeGetter other
 
     /**
@@ -109,11 +110,13 @@ abstract class Lens<A, B> {
      */
     operator fun <C> plus(other: Lens<B, C>): Lens<A, C> = composeLens(other)
 
-    operator fun <C> plus(other: Optional<B, C>): Optional<A,C> = composeOptional(other)
+    operator fun <C> plus(other: Optional<B, C>): Optional<A, C> = composeOptional(other)
 
-    operator fun <C> plus(other: Getter<B, C>): Getter<A,C> = composeGetter(other)
+    operator fun <C> plus(other: Getter<B, C>): Getter<A, C> = composeGetter(other)
 
-    /** view a [Lens] as an [Optional] */
+    /**
+     * View a [Lens] as an [Optional]
+     */
     fun asOptional(): Optional<A, B> = Optional(
             { a -> Option.Some(get(a)) },
             { b -> set(b) }
@@ -123,5 +126,12 @@ abstract class Lens<A, B> {
      * View a [Lens] as a [Getter]
      */
     fun asGetter(): Getter<A, B> = Getter(this::get)
+
+    /**
+     * View a [Lens] as a [Fold]
+     */
+    fun asFold() = object : Fold<A, B>() {
+        override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R = f(get(a))
+    }
 
 }
