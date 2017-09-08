@@ -95,8 +95,23 @@ abstract class Lens<A, B> {
     )
 
     /** compose a [Lens] with a [Optional] */
-    infix fun <C> composeOptional(other: Optional<B, C>) =
+    infix fun <C> composeOptional(other: Optional<B, C>): Optional<A,C> =
             asOptional() composeOptional other
+
+    /**
+     * Compose a [Lens] with a [Getter]
+     */
+    infix fun <C> composeGetter(other: Getter<B, C>): Getter<A,C> =
+            asGetter() composeGetter other
+
+    /**
+     * Plus operator overload to compose lenses
+     */
+    operator fun <C> plus(other: Lens<B, C>): Lens<A, C> = composeLens(other)
+
+    operator fun <C> plus(other: Optional<B, C>): Optional<A,C> = composeOptional(other)
+
+    operator fun <C> plus(other: Getter<B, C>): Getter<A,C> = composeGetter(other)
 
     /** view a [Lens] as an [Optional] */
     fun asOptional(): Optional<A, B> = Optional(
@@ -105,8 +120,8 @@ abstract class Lens<A, B> {
     )
 
     /**
-     * plus operator overload to compose lenses
+     * View a [Lens] as a [Getter]
      */
-    operator fun <C> plus(other: Lens<B, C>): Lens<A, C> = composeLens(other)
+    fun asGetter(): Getter<A, B> = Getter(this::get)
 
 }

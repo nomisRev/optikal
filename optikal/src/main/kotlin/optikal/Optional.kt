@@ -61,11 +61,18 @@ abstract class Optional<A, B> {
     )
 
     /** compose a [Optional] with a [Prism] */
-    infix fun <C> composePrism(other: Prism<B, C>): Optional<B, C> = other.asOptional()
+    infix fun <C> composePrism(other: Prism<B, C>): Optional<A, C> = composeOptional(other.asOptional())
 
     /** compose a [Optional] with a [Lens] */
-    infix fun <C> composeLens(other: Lens<B, C>): Optional<B, C> = other.asOptional()
+    infix fun <C> composeLens(other: Lens<B, C>): Optional<A, C> = composeOptional(other.asOptional())
 
-    /** plus operator overload to compose optionals */
+    /**
+     * Plus operator overload to compose optionals
+     */
     operator fun <C> plus(o: Optional<B, C>): Optional<A, C> = composeOptional(o)
+
+    operator fun <C> plus(o: Prism<B, C>): Optional<A, C> = composePrism(o)
+
+    operator fun <C> plus(o: Lens<B, C>): Optional<A, C> = composeLens(o)
+
 }
