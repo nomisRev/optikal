@@ -18,5 +18,3 @@ dependencies {
     testCompile fileTree(dir: './src/test/libs', includes: ['*.jar'])
     testCompile files(Jvm.current().getToolsJar())
 }
-
-build.dependsOn ':detekt'

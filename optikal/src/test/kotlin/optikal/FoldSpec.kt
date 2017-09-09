@@ -12,23 +12,10 @@ import kategory.Option
 import kategory.k
 import org.junit.runner.RunWith
 
-@RunWith(KTestJUnitRunner::class)
 class FoldSpec : StringSpec() {
 
     val intFold: Fold<ListKWKind<Int>, Int> = Fold.fromFoldable(ListKW.foldable())
     val stringFold: Fold<ListKWKind<String>, String> = Fold.fromFoldable(ListKW.foldable())
-
-    val addMonoid = object : Monoid<Int> {
-        override fun empty() = 0
-        override fun combine(a: Int, b: Int) = a + b
-    }
-
-    val addOptionMonoid = object : Monoid<Option<Int>> {
-        override fun empty() = Option.None
-        override fun combine(a: Option<Int>, b: Option<Int>) = a.flatMap { aInt ->
-            b.map { aInt + it }
-        }
-    }
 
     init {
 

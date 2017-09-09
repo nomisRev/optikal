@@ -1,8 +1,6 @@
 group 'com.github.nomisrev'
 version '1.0-SNAPSHOT'
 
-apply from: 'detekt.gradle'
-
 buildscript {
     ext.kotlinVersion = '1.1.4-3'
     ext.kotlinxCoroutinesVersion = '0.18'

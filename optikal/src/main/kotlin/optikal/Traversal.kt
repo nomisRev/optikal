@@ -4,8 +4,11 @@ import kategory.Applicative
 import kategory.Const
 import kategory.ConstHK
 import kategory.HK
+import kategory.Id
+import kategory.IntMonoid
 import kategory.Monoid
 import kategory.applicative
+import kategory.identity
 import kategory.map
 import kategory.monoid
 import kategory.value
@@ -18,7 +21,7 @@ abstract class Traversal<A, B> {
     /**
      * Modify polymorphically the target of a [Traversal] with an Applicative function all traversal methods are written in terms of modifyF
      */
-    inline fun <reified F> modifyF(FA: Applicative<F> = applicative(), noinline f: (B) -> HK<F, B>, a: A): HK<F, A> = modifyFF(FA, f, a)
+    inline fun <reified F> modifyF(FA: Applicative<F> = applicative(), a: A, crossinline f: (B) -> HK<F, B>): HK<F, A> = modifyFF(FA, { f(it) }, a)
 
     companion object {
         operator fun <A, B> invoke(vararg lenses: Lens<A, B>) = object : Traversal<A, B>() {
@@ -28,14 +31,37 @@ abstract class Traversal<A, B> {
                 })
             })
         }
+
+        inline fun <reified T, A> fromTraversable(TT: kategory.Traverse<T>) = object : Traversal<HK<T, A>, A>() {
+            override fun <F> modifyFF(FA: Applicative<F>, f: (A) -> HK<F, A>, a: HK<T, A>): HK<F, HK<T, A>> = TT.traverse(a, f, FA)
+        }
     }
 
     /**
      * Map each target to a Monoid and combine the results
      */
     @Suppress("UNUSED_PARAMETER")
-    inline fun <reified R> foldMap(FA: Applicative<HK<ConstHK, R>> = applicative(), M: Monoid<R> = monoid(), crossinline f: (B) -> R, a: A): R = modifyF(FA, { b ->
+    inline fun <reified R> foldMap(FA: Applicative<HK<ConstHK, R>> = applicative(), M: Monoid<R> = monoid(), crossinline f: (B) -> R, a: A): R = modifyF(FA, a, { b ->
         Const(f(b))
-    }, a).value()
+    }).value()
 
+    /**
+     * Modify polymorphically the target of a [Traversal] with a function
+     */
+    inline fun modify(crossinline f: (B) -> B): (A) -> A = { a ->
+        modifyF(Id.applicative(), a, { Id(f(it)) }).value()
+    }
+
+    /**
+     * Set polymorphically the target of a [Traversal] with a value
+     */
+    fun set(b: B): (A) -> A = modify { b }
+
+    /**
+     * Calculate the number of targets
+     */
+    fun length(a: A): Int = foldMap(Const.applicative(), IntMonoid, { 1 }, a)
 }
+
+inline fun <reified A, reified B> Traversal<A, B>.fold(M: Monoid<B> = monoid(), a: A): B =
+        foldMap(Const.applicative(), M, ::identity, a)
