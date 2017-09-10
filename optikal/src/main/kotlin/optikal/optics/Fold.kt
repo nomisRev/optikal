@@ -27,6 +27,23 @@ abstract class Fold<A, B> {
     abstract fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R
 
     companion object {
+
+        fun <A> id() = Iso.id<A>().asFold()
+
+        inline fun <reified A> codiagonal() = object : Fold<Either<A, A>, A>() {
+            override fun <R> foldMap(M: Monoid<R>, a: Either<A, A>, f: (A) -> R): R = a.fold(f, f)
+        }
+
+        fun <A> select(p: (A) -> Boolean): Fold<A, A> = object : Fold<A, A>() {
+            override fun <R> foldMap(M: Monoid<R>, a: A, f: (A) -> R): R =
+                    if (p(a)) f(a) else M.empty()
+        }
+
+        /**
+         * [Fold] that points to nothing
+         */
+        fun <A, B> void() = Optional.void<A, B>().asFold()
+
         /**
          * Create a [Fold] from a Foldable
          */
@@ -34,11 +51,6 @@ abstract class Fold<A, B> {
             override fun <R> foldMap(M: Monoid<R>, a: HK<F, A>, f: (A) -> R): R = Foldable.foldMap(M, a, f)
         }
 
-        inline fun <reified A> codiagonal() = object : Fold<Either<A, A>, A>() {
-            override fun <R> foldMap(M: Monoid<R>, a: Either<A, A>, f: (A) -> R): R = a.fold(f, f)
-        }
-
-        fun <A, B> void() = Optional.void<A, B>().asFold()
 
     }
 

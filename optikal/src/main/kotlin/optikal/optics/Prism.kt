@@ -3,15 +3,19 @@ package optikal.optics
 import kategory.Applicative
 import kategory.Option
 import kategory.Either
+import kategory.Eq
 import kategory.HK
 import kategory.Monoid
 import kategory.Tuple2
 import kategory.applicative
+import kategory.eq
 import kategory.flatMap
 import kategory.getOrElse
 import kategory.identity
 import kategory.left
+import kategory.none
 import kategory.right
+import kategory.some
 import kategory.toT
 
 /**
@@ -34,11 +38,22 @@ abstract class Prism<A, B> {
     abstract fun reverseGet(b: B): A
 
     companion object {
+
+        fun <A> id() = Iso.id<A>().asPrism()
+
         operator fun <A, B> invoke(getOrModify: (A) -> Either<A, B>, reverseGet: (B) -> A) = object : Prism<A, B>() {
             override fun getOrModify(a: A): Either<A, B> = getOrModify(a)
 
             override fun reverseGet(b: B): A = reverseGet(b)
         }
+
+        /**
+         * a [Prism] that checks for equality with a given value
+         */
+        inline fun <reified A> only(a: A, EQA: Eq<A> = eq()) = Prism<A, Unit>(
+                getOrModify = { a2 -> (if (EQA.eqv(a,a2)) a.left() else Unit.right()) },
+                reverseGet = { a }
+        )
     }
 
     /**

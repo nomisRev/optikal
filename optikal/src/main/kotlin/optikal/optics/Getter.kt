@@ -23,6 +23,11 @@ abstract class Getter<A, B> {
     abstract fun get(a: A): B
 
     companion object {
+
+        fun <A> id() = Iso.id<A>().asGetter()
+
+        fun <A> codiagonal(): Getter<Either<A, A>, A> = Getter { it.fold(::identity, ::identity) }
+
         operator fun <A, B> invoke(_get: (A) -> B) = object : Getter<A, B>() {
             override fun get(a: A): B = _get(a)
         }
@@ -83,9 +88,9 @@ abstract class Getter<A, B> {
         other.get(get(a))
     }
 
-    operator fun <C> plus(other: Getter<B, C>): Getter<A,C> = composeGetter(other)
+    operator fun <C> plus(other: Getter<B, C>): Getter<A, C> = composeGetter(other)
 
-    fun asFold() = object : Fold<A,B>() {
+    fun asFold() = object : Fold<A, B>() {
         override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R = f(get(a))
     }
 

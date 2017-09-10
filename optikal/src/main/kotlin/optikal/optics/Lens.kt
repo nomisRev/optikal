@@ -7,6 +7,7 @@ import kategory.HK
 import kategory.Monoid
 import kategory.Option
 import kategory.functor
+import kategory.identity
 
 /**
  * A [Lens] can be seen as a pair of functions `get: (A) -> B` and `set: (B) -> (A) -> A`
@@ -25,6 +26,14 @@ abstract class Lens<A, B> {
     abstract fun set(b: B): (A) -> A
 
     companion object {
+
+        fun <A> id() = Iso.id<A>().asLens()
+
+        fun <A> codiagonal() = Lens<Either<A, A>, A>(
+                get = { it.fold(::identity, ::identity) },
+                set = { a -> { it.bimap({ a }, { a }) } }
+        )
+
         operator fun <A, B> invoke(get: (A) -> B, set: (B) -> (A) -> A) = object : Lens<A, B>() {
             override fun get(a: A): B = get(a)
 

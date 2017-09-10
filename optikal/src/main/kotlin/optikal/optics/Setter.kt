@@ -1,5 +1,6 @@
 package optikal.optics
 
+import kategory.Either
 import kategory.Functor
 import kategory.HK
 import kategory.functor
@@ -25,6 +26,11 @@ abstract class Setter<A, B> {
     abstract fun set(b: B): (A) -> A
 
     companion object {
+
+        fun <A> id() = Iso.id<A>().asSetter()
+
+        fun <A> codiagonal(): Setter<Either<A, A>, A> = Setter { f -> { it.bimap(f, f) } }
+
         /**
          * create a [Setter] using modify function
          */
@@ -40,6 +46,20 @@ abstract class Setter<A, B> {
         inline fun <A, reified F> fromFunctor(FF: Functor<F> = functor()): Setter<HK<F, A>, A> = Setter { f ->
             { fa -> FF.map(fa, f) }
         }
+    }
+
+    /**
+     * join two [Setter] with the same target
+     */
+    fun <C> choice(other: Setter<C, B>): Setter<Either<A, C>, B> = Setter { f ->
+        { it.bimap(modify(f), other.modify(f)) }
+    }
+
+    /**
+     * compose a [Setter] with a [Setter]
+     */
+    infix fun <C> composeSetter(other: Setter<B, C>): Setter<A, C> = Setter { fb ->
+        modify(other.modify(fb))
     }
 
 }

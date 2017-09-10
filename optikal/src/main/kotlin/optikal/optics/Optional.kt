@@ -8,6 +8,7 @@ import kategory.Option
 import kategory.getOrElse
 import kategory.identity
 import kategory.none
+import kategory.right
 
 /**
  * A [Optional] can be seen as a pair of functions `getOption: (A) -> Option<B>` and `set: (B) -> (A) -> A`
@@ -29,6 +30,14 @@ abstract class Optional<A, B> {
     abstract fun set(b: B): (A) -> (A)
 
     companion object {
+
+        fun <A> id() = Iso.id<A>().asOptional()
+
+        fun <A> codiagonal() = Optional<Either<A, A>, A>(
+                getOption = { it.fold({ it.right() }, { it.right() }).toOption() },
+                set = { a -> { it.bimap({ a }, { a }) } }
+        )
+
         operator fun <A, B> invoke(getOption: (A) -> Option<B>, set: (B) -> (A) -> (A)) = object : Optional<A, B>() {
             override fun getOption(a: A): Option<B> = getOption(a)
 
@@ -90,4 +99,13 @@ abstract class Optional<A, B> {
                 getOption(a).map(f).getOrElse { M.empty() }
     }
 
+    /**
+     * View a [Optional] as a [Traversal]
+     */
+    fun asTraversal() = object : Traversal<A, B>() {
+        override fun <F> modifyFF(FA: Applicative<F>, f: (B) -> HK<F, B>, a: A): HK<F, A> = getOrModify(a).fold(
+                { FA.pure(it) },
+                { FA.map(f(it), { set(it)(a) }) }
+        )
+    }
 }
