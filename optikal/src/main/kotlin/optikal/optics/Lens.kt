@@ -8,6 +8,8 @@ import kategory.Monoid
 import kategory.Option
 import kategory.functor
 import kategory.identity
+import kategory.none
+import kategory.some
 
 /**
  * A [Lens] can be seen as a pair of functions `get: (A) -> B` and `set: (B) -> (A) -> A`
@@ -50,14 +52,15 @@ abstract class Lens<A, B> {
      * Modify the target of a [Lens] using Functor function
      */
     inline fun <reified F> modifyF(FF: Functor<F> = functor(), f: (B) -> HK<F, B>, a: A): HK<F, A> =
-            FF.map(f(get(a)), { set(it)(a) })
+            FF.map(f(get(a)), { b -> set(b)(a) })
 
     /**
      * Find if the target satisfies the predicate
      */
     inline fun find(crossinline p: (B) -> Boolean): (A) -> Option<B> = {
-        val a = get(it)
-        if (p(a)) Option.Some(a) else Option.None
+        get(it).let { a ->
+            if (p(a)) a.some() else none()
+        }
     }
 
     /**
@@ -129,7 +132,7 @@ abstract class Lens<A, B> {
      */
     fun asOptional(): Optional<A, B> = Optional(
             { a -> Option.Some(get(a)) },
-            { b -> set(b) }
+            this::set
     )
 
     /**

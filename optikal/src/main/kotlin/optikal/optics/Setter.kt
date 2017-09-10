@@ -29,7 +29,7 @@ abstract class Setter<A, B> {
 
         fun <A> id() = Iso.id<A>().asSetter()
 
-        fun <A> codiagonal(): Setter<Either<A, A>, A> = Setter { f -> { it.bimap(f, f) } }
+        fun <A> codiagonal(): Setter<Either<A, A>, A> = Setter { f -> { aa -> aa.bimap(f, f) } }
 
         /**
          * create a [Setter] using modify function
@@ -52,7 +52,7 @@ abstract class Setter<A, B> {
      * join two [Setter] with the same target
      */
     fun <C> choice(other: Setter<C, B>): Setter<Either<A, C>, B> = Setter { f ->
-        { it.bimap(modify(f), other.modify(f)) }
+        { ac -> ac.bimap(modify(f), other.modify(f)) }
     }
 
     /**

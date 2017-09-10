@@ -1,7 +1,9 @@
 package optikal.optics.sample
 
-import kategory.getOrElse
-import optikal.*
+import optikal.optics.Lens
+import optikal.optics.Lenses
+import optikal.optics.Prisms
+
 
 @Prisms sealed class Domain
 @Lenses data class Street(val number: Int, val name: String) : Domain()

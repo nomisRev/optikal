@@ -34,8 +34,8 @@ abstract class Optional<A, B> {
         fun <A> id() = Iso.id<A>().asOptional()
 
         fun <A> codiagonal() = Optional<Either<A, A>, A>(
-                getOption = { it.fold({ it.right() }, { it.right() }).toOption() },
-                set = { a -> { it.bimap({ a }, { a }) } }
+                getOption = { aa -> aa.fold({ a -> a.right() }, { a -> a.right() }).toOption() },
+                set = { a -> { aa -> aa.bimap({ a }, { a }) } }
         )
 
         operator fun <A, B> invoke(getOption: (A) -> Option<B>, set: (B) -> (A) -> (A)) = object : Optional<A, B>() {
@@ -46,13 +46,13 @@ abstract class Optional<A, B> {
 
         fun <A, B> void() = Optional<A, B>(
                 { _ -> none() },
-                { _ -> { b -> identity(b) } }
+                { _ -> ::identity }
         )
 
     }
 
     /** get the target of a [Optional] or return the original value while allowing the type to change if it does not match */
-    fun getOrModify(a: A): Either<A, B> = getOption(a).fold({ Either.Left(a) }, { Either.Right(it) })
+    fun getOrModify(a: A): Either<A, B> = getOption(a).fold({ Either.Left(a) }, { b -> Either.Right(b) })
 
     /** check if there is a target */
     fun nonEmpty(a: A): Boolean = getOption(a).isDefined
@@ -63,19 +63,19 @@ abstract class Optional<A, B> {
     /** modify polymorphically the target of a [Optional] with an Applicative function */
     inline fun <reified F> modifyF(FA: Applicative<F> = kategory.applicative(), crossinline f: (B) -> HK<F, B>, a: A): HK<F, A> =
             getOrModify(a).fold(
-                    { FA.pure(it) },
-                    { FA.map(f(it), { set(it)(a) }) }
+                    FA::pure,
+                    { FA.map(f(it), { b -> set(b)(a) }) }
             )
 
     /**
      * modify polymorphically the target of a [Optional] with a function.
      * return empty if the [Optional] is not matching
      */
-    fun modifiyOption(f: (B) -> B): (A) -> Option<A> = { a -> getOption(a).map({ set(f(it))(a) }) }
+    fun modifiyOption(f: (B) -> B): (A) -> Option<A> = { a -> getOption(a).map({ b -> set(f(b))(a) }) }
 
     /** compose a [Optional] with a [Optional] */
     infix fun <C> composeOptional(other: Optional<B, C>): Optional<A, C> = Optional(
-            { a -> getOption(a).flatMap { other.getOption(it) } },
+            { a -> getOption(a).flatMap(other::getOption) },
             { c -> modify(other.set(c)) }
     )
 
@@ -96,7 +96,7 @@ abstract class Optional<A, B> {
 
     fun asFold() = object : Fold<A, B>() {
         override fun <R> foldMapI(M: Monoid<R>, a: A, f: (B) -> R): R =
-                getOption(a).map(f).getOrElse { M.empty() }
+                getOption(a).map(f).getOrElse(M::empty)
     }
 
     /**
@@ -104,7 +104,7 @@ abstract class Optional<A, B> {
      */
     fun asTraversal() = object : Traversal<A, B>() {
         override fun <F> modifyFI(FA: Applicative<F>, f: (B) -> HK<F, B>, a: A): HK<F, A> = getOrModify(a).fold(
-                { FA.pure(it) },
+                FA::pure,
                 { FA.map(f(it), { set(it)(a) }) }
         )
     }

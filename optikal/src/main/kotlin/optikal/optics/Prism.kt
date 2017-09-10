@@ -8,12 +8,15 @@ import kategory.HK
 import kategory.Monoid
 import kategory.Tuple2
 import kategory.applicative
+import kategory.compose
 import kategory.eq
 import kategory.flatMap
 import kategory.getOrElse
 import kategory.identity
 import kategory.left
+import kategory.none
 import kategory.right
+import kategory.some
 import kategory.toT
 
 /**
@@ -49,7 +52,7 @@ abstract class Prism<A, B> {
          * a [Prism] that checks for equality with a given value
          */
         inline fun <reified A> only(a: A, EQA: Eq<A> = eq()) = Prism<A, Unit>(
-                getOrModify = { a2 -> (if (EQA.eqv(a,a2)) a.left() else Unit.right()) },
+                getOrModify = { a2 -> (if (EQA.eqv(a, a2)) a.left() else Unit.right()) },
                 reverseGet = { a }
         )
     }
@@ -63,7 +66,7 @@ abstract class Prism<A, B> {
      * Modify the target of a [Prism] with an Applicative function
      */
     inline fun <reified F> modifyF(FA: Applicative<F> = applicative(), crossinline f: (B) -> HK<F, B>, a: A): HK<F, A> = getOrModify(a).fold(
-            { FA.pure(it) },
+            FA::pure,
             { FA.map(f(it), this::reverseGet) }
     )
 
@@ -102,17 +105,17 @@ abstract class Prism<A, B> {
     /**
      * Find if the target satisfies the predicate
      */
-    inline fun find(crossinline p: (B) -> Boolean): (A) -> Option<B> = { getOption(it).flatMap { if (p(it)) Option.Some(it) else Option.None } }
+    inline fun find(crossinline p: (B) -> Boolean): (A) -> Option<B> = { a -> getOption(a).flatMap { b -> if (p(b)) b.some() else none() } }
 
     /**
      * Check if there is a target and it satisfies the predicate
      */
-    inline fun exist(crossinline p: (B) -> Boolean): (A) -> Boolean = { getOption(it).fold({ false }, p) }
+    inline fun exist(crossinline p: (B) -> Boolean): (A) -> Boolean = { a -> getOption(a).fold({ false }, p) }
 
     /**
      * Check if there is no target or the target satisfies the predicate
      */
-    inline fun all(crossinline p: (B) -> Boolean): (A) -> Boolean = { getOption(it).fold({ true }, p) }
+    inline fun all(crossinline p: (B) -> Boolean): (A) -> Boolean = { a -> getOption(a).fold({  true }, p) }
 
     /**
      * Convenience method to create a product of the target and a type C
@@ -133,13 +136,10 @@ abstract class Prism<A, B> {
     /**
      * View a [Prism] as an [Optional]
      */
-    fun asOptional(): Optional<A, B> = Optional(
-            { a -> getOption(a) },
-            { b -> set(b) }
-    )
+    fun asOptional(): Optional<A, B> = Optional(this::getOption, this::set)
 
     fun asFold(): Fold<A, B> = object : Fold<A, B>() {
-        override fun <R> foldMapI(M: Monoid<R>, a: A, f: (B) -> R): R = getOption(a).map(f).getOrElse { M.empty() }
+        override fun <R> foldMapI(M: Monoid<R>, a: A, f: (B) -> R): R = getOption(a).map(f).getOrElse(M::empty)
     }
 
     /**
@@ -155,26 +155,26 @@ abstract class Prism<A, B> {
     /**
      * View a [Prism] as a [Setter]
      */
-    fun asSetter(): Setter<A,B> = Setter(this::modify)
+    fun asSetter(): Setter<A, B> = Setter(this::modify)
 
 
     infix fun <C> composePrism(other: Prism<B, C>): Prism<A, C> = Prism(
-            { a -> getOrModify(a).flatMap { b: B -> other.getOrModify(b).bimap({ set(it)(a) }, ::identity) } },
-            { reverseGet(other.reverseGet(it)) }
+            { a -> getOrModify(a).flatMap { b -> other.getOrModify(b).bimap({ set(it)(a) }, ::identity) } },
+            this::reverseGet compose other::reverseGet
     )
 
     /** compose a [Prism] with a [Optional] */
     infix fun <C> composeOptional(other: Optional<B, C>): Optional<A, C> = asOptional() composeOptional other
 
-    infix fun <C> composeFold(other: Fold<B,C>): Fold<A,C> = asFold() composeFold other
+    infix fun <C> composeFold(other: Fold<B, C>): Fold<A, C> = asFold() composeFold other
 
-    infix fun <C> composeGetter(other: Getter<B,C>): Fold<A,C> = asFold() composeGetter other
+    infix fun <C> composeGetter(other: Getter<B, C>): Fold<A, C> = asFold() composeGetter other
 
-    infix fun <C> composeSetter(other: Setter<B,C>): Setter<A,C> = asSetter() composeSetter other
+    infix fun <C> composeSetter(other: Setter<B, C>): Setter<A, C> = asSetter() composeSetter other
 
-    infix fun <C> composeTraversal(other: Traversal<B,C>): Traversal<A,C> = asTraversal() composeTraversal other
+    infix fun <C> composeTraversal(other: Traversal<B, C>): Traversal<A, C> = asTraversal() composeTraversal other
 
-    infix fun <C> composeLens(other: Lens<B,C>): Optional<A,C> = asOptional() composeLens other
+    infix fun <C> composeLens(other: Lens<B, C>): Optional<A, C> = asOptional() composeLens other
 
     /**
      * Plus operator overload to compose lenses

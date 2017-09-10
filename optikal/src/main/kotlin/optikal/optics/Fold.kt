@@ -60,7 +60,7 @@ abstract class Fold<A, B> {
     /**
      * Calculate the number of targets
      */
-    fun length(a: A) = foldMap(IntMonoid, a, { 1 })
+    fun length(a: A) = foldMap(IntMonoid, a, { _ -> 1 })
 
     /**
      * Find the first target matching the predicate
@@ -72,33 +72,22 @@ abstract class Fold<A, B> {
     /**
      * Get the first target
      */
-    fun headOption(a: A): Option<B> = foldMap(firstOptionMonoid<B>(), a, { it.some().tag() }).unwrap()
+    fun headOption(a: A): Option<B> = foldMap(firstOptionMonoid<B>(), a, { b -> b.some().tag() }).unwrap()
 
     /**
      * Get the last target
      */
-    fun lastOption(a: A): Option<B> = foldMap(lastOptionMonoid<B>(), a, { it.some().tag() }).unwrap()
+    fun lastOption(a: A): Option<B> = foldMap(lastOptionMonoid<B>(), a, { b -> b.some().tag() }).unwrap()
 
     /**
      * Check if all targets satisfy the predicate
-     * TODO move addMonoid to kategory
      */
-    fun all(p: (B) -> Boolean): (A) -> Boolean = { a ->
-        foldMap(M = object : Monoid<Boolean> {
-            override fun combine(a: Boolean, b: Boolean): Boolean = a && b
-
-            override fun empty(): Boolean = true
-        }, a = a, f = p)
-    }
+    fun all(p: (B) -> Boolean): (A) -> Boolean = { a -> foldMap(addMonoid, a, p) }
 
     /**
      * Check if there is no target
      */
-    fun isEmpty(a: A): Boolean = foldMap(M = object : Monoid<Boolean> {
-        override fun combine(a: Boolean, b: Boolean): Boolean = a && b
-
-        override fun empty(): Boolean = true
-    }, a = a, f = { false })
+    fun isEmpty(a: A): Boolean = foldMap(addMonoid, a, { _ -> false })
 
     /**
      * Check if there is at least one target
@@ -110,7 +99,7 @@ abstract class Fold<A, B> {
      */
     fun <C> choice(other: Fold<C, B>): Fold<Either<A, C>, B> = object : Fold<Either<A, C>, B>() {
         override fun <R> foldMapI(M: Monoid<R>, a: Either<A, C>, f: (B) -> R): R =
-                a.fold({ this@Fold.foldMapI(M, it, f) }, { other.foldMapI(M, it, f) })
+                a.fold({ ac -> this@Fold.foldMapI(M, ac, f) }, { c -> other.foldMapI(M, c, f) })
     }
 
     fun <C> left(): Fold<Either<A, C>, Either<B, C>> = object : Fold<Either<A, C>, Either<B, C>>() {
@@ -120,14 +109,14 @@ abstract class Fold<A, B> {
 
     fun <C> right(): Fold<Either<C, A>, Either<C, B>> = object : Fold<Either<C, A>, Either<C, B>>() {
         override fun <R> foldMapI(M: Monoid<R>, a: Either<C, A>, f: (Either<C, B>) -> R): R =
-                a.fold({ c -> f(c.left()) }, { a1 -> this@Fold.foldMapI(M, a1, { b -> f(b.right()) }) })
+                a.fold({ c ->  f(c.left()) }, { a1 -> this@Fold.foldMapI(M, a1, { b -> f(b.right()) }) })
     }
 
     /**
      * Compose a [Fold] with a [Fold]
      */
     infix fun <C> composeFold(other: Fold<B, C>): Fold<A, C> = object : Fold<A, C>() {
-        override fun <R> foldMapI(M: Monoid<R>, a: A, f: (C) -> R): R = this@Fold.foldMapI(M, a, { b -> other.foldMapI(M, b, { f(it) }) })
+        override fun <R> foldMapI(M: Monoid<R>, a: A, f: (C) -> R): R = this@Fold.foldMapI(M, a, { b -> other.foldMapI(M, b, f) })
     }
 
     /**
@@ -138,27 +127,27 @@ abstract class Fold<A, B> {
     /**
      * Compose a [Fold] with a [Traversal]
      */
-//    infix fun <C> composeTraversal(other: Traversal<A,B>): Fold<A,B> = TODO figure out a way to transform Traversal to Fold.
+    //    infix fun <C> composeTraversal(other: Traversal<A,B>): Fold<A,B> = TODO figure out a way to transform Traversal to Fold.
 
     /**
      * Compose a [Fold] with a [Optional]
      */
-    infix fun <C> composeOptional(other: Optional<B,C>): Fold<A,C> = composeFold(other.asFold())
+    infix fun <C> composeOptional(other: Optional<B, C>): Fold<A, C> = composeFold(other.asFold())
 
     /**
      * Compose a [[Fold]] with a [Prism]
      */
-    infix fun <C> composePrism(other: Prism<B,C>): Fold<A,C> = composeFold(other.asFold())
+    infix fun <C> composePrism(other: Prism<B, C>): Fold<A, C> = composeFold(other.asFold())
 
     /**
      * Compose a [Fold] with a [Lens]
      */
-    infix fun <C> composeLens(other: Lens<B,C>): Fold<A,C> = composeFold(other.asFold())
+    infix fun <C> composeLens(other: Lens<B, C>): Fold<A, C> = composeFold(other.asFold())
 
     /**
      * Compose a [Fold] with a [Iso]
      */
-    infix fun <C> composeIso(other: Iso<B,C>): Fold<A,C> = composeFold(other.asFold())
+    infix fun <C> composeIso(other: Iso<B, C>): Fold<A, C> = composeFold(other.asFold())
 
     /**
      * Plus operator overload to compose lenses
@@ -179,3 +168,10 @@ abstract class Fold<A, B> {
 inline fun <A, reified B> Fold<A, B>.fold(M: Monoid<B> = monoid(), a: A): B = foldMapI(M, a, ::identity)
 
 inline fun <A, reified B> Fold<A, B>.getAll(M: Monoid<ListKW<B>> = monoid(), a: A): ListKW<B> = foldMapI(M, a, { ListKW.pure(it) })
+
+//TODO move addMonoid to kategory
+private val addMonoid = object : Monoid<Boolean> {
+    override fun combine(a: Boolean, b: Boolean): Boolean = a && b
+
+    override fun empty(): Boolean = true
+}

@@ -31,7 +31,7 @@ abstract class Iso<A, B> {
          * o      composeIso Iso.id == o
          * Iso.id composeO   o        == o (replace composeO by composeLens, composeIso, composePrism, ...)
          */
-        fun <A> id() = Iso<A, A>(get = ::identity, reverseGet = ::identity)
+        fun <A> id() = Iso<A, A>(::identity, ::identity)
 
         operator fun <A, B> invoke(get: (A) -> (B), reverseGet: (B) -> A) = object : Iso<A, B>() {
 
@@ -52,7 +52,7 @@ abstract class Iso<A, B> {
     }
 
     /** modify polymorphically the target of a [Iso] with a function */
-    inline fun modify(crossinline f: (B) -> B): (A) -> A = { reverseGet(f(get(it))) }
+    inline fun modify(crossinline f: (B) -> B): (A) -> A = { a -> reverseGet(f(get(a))) }
 
     /** modify polymorphically the target of a [Iso] with a Functor function */
     inline fun <reified F> modifyF(FF: Functor<F> = functor(), f: (B) -> HK<F, B>, a: A): HK<F, A> =
@@ -64,7 +64,7 @@ abstract class Iso<A, B> {
     /** compose a [Iso] with a [Iso] */
     infix fun <C> composeIso(other: Iso<B, C>): Iso<A, C> = Iso(
             { a -> other.get(get(a)) },
-            { c -> reverseGet(other.reverseGet(c)) }
+            this::reverseGet compose other::reverseGet
     )
 
     /** view a [Iso] as a [Optional] */
@@ -76,19 +76,16 @@ abstract class Iso<A, B> {
     /** view a [Iso] as a [Prism] */
     fun asPrism(): Prism<A, B> = Prism(
             { a -> Either.Right(get(a)) },
-            { b -> reverseGet(b) }
+            this::reverseGet
     )
 
     /** view a [Iso] as a [Lens] */
-    fun asLens(): Lens<A, B> = Lens(
-            this::get,
-            this::set
-    )
+    fun asLens(): Lens<A, B> = Lens(this::get, this::set)
 
     /**
      * view a [Iso] as a [Getter]
      */
-    fun asGetter(): Getter<A,B> = Getter(this::get)
+    fun asGetter(): Getter<A, B> = Getter(this::get)
 
     /**
      * View an [Iso] as a [Setter]
@@ -106,7 +103,7 @@ abstract class Iso<A, B> {
     /**
      * View a [Iso] as a [Fold]
      */
-    fun asFold(): Fold<A,B> = object : Fold<A,B>(){
+    fun asFold(): Fold<A, B> = object : Fold<A, B>() {
         override fun <R> foldMapI(M: Monoid<R>, a: A, f: (B) -> R): R = f(get(a))
     }
 }

@@ -14,7 +14,9 @@ import kategory.identity
 import kategory.left
 import kategory.map
 import kategory.monoid
+import kategory.none
 import kategory.right
+import kategory.some
 import kategory.traverse
 import kategory.value
 
@@ -26,7 +28,7 @@ abstract class Traversal<A, B> {
     /**
      * Modify polymorphically the target of a [Traversal] with an Applicative function all traversal methods are written in terms of modifyF
      */
-    inline fun <reified F> modifyF(FA: Applicative<F> = applicative(), a: A, crossinline f: (B) -> HK<F, B>): HK<F, A> = modifyFI(FA, { f(it) }, a)
+    inline fun <reified F> modifyF(FA: Applicative<F> = applicative(), a: A, crossinline f: (B) -> HK<F, B>): HK<F, A> = modifyFI(FA, { b -> f(b) }, a)
 
     companion object {
         fun <A> id() = Iso.id<A>().asTraversal()
@@ -72,7 +74,7 @@ abstract class Traversal<A, B> {
      * Modify polymorphically the target of a [Traversal] with a function
      */
     inline fun modify(crossinline f: (B) -> B): (A) -> A = { a ->
-        modifyF(Id.applicative(), a, { Id(f(it)) }).value()
+        modifyF(Id.applicative(), a, { b -> Id(f(b)) }).value()
     }
 
     /**
@@ -99,7 +101,7 @@ abstract class Traversal<A, B> {
  */
 inline fun <reified A, reified B> Traversal<A, B>.find(crossinline p: (B) -> Boolean): (A) -> Option<B> = { a: A ->
     foldMap(Const.applicative(), firstOptionMonoid<B>(), { b ->
-        (if (p(b)) Option.Some(b) else Option.None).tag()
+        (if (p(b)) b.some() else none()).tag()
     }, a).unwrap()
 }
 
