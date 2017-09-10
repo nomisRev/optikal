@@ -62,7 +62,7 @@ abstract class Iso<A, B> {
     fun set(b: B): (A) -> (A) = { reverseGet(b) }
 
     /** compose a [Iso] with a [Iso] */
-    infix fun <C> composeIso(other: Iso<B, C>): Iso<A, C> = Iso<A, C>(
+    infix fun <C> composeIso(other: Iso<B, C>): Iso<A, C> = Iso(
             { a -> other.get(get(a)) },
             { c -> reverseGet(other.reverseGet(c)) }
     )
@@ -99,7 +99,7 @@ abstract class Iso<A, B> {
      * View a [Iso] as a [Traversal]
      */
     fun asTraversal(): Traversal<A, B> = object : Traversal<A, B>() {
-        override fun <F> modifyFF(FA: Applicative<F>, f: (B) -> HK<F, B>, a: A): HK<F, A> =
+        override fun <F> modifyFI(FA: Applicative<F>, f: (B) -> HK<F, B>, a: A): HK<F, A> =
                 FA.map(f(get(a)), this@Iso::reverseGet)
     }
 
@@ -107,6 +107,6 @@ abstract class Iso<A, B> {
      * View a [Iso] as a [Fold]
      */
     fun asFold(): Fold<A,B> = object : Fold<A,B>(){
-        override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R = f(get(a))
+        override fun <R> foldMapI(M: Monoid<R>, a: A, f: (B) -> R): R = f(get(a))
     }
 }

@@ -13,9 +13,7 @@ import kategory.flatMap
 import kategory.getOrElse
 import kategory.identity
 import kategory.left
-import kategory.none
 import kategory.right
-import kategory.some
 import kategory.toT
 
 /**
@@ -86,16 +84,6 @@ abstract class Prism<A, B> {
      */
     fun set(b: B): (A) -> A = modify { b }
 
-    infix fun <C> composePrism(other: Prism<B, C>): Prism<A, C> = Prism(
-            { a -> getOrModify(a).flatMap { b: B -> other.getOrModify(b).bimap({ set(it)(a) }, ::identity) } },
-            { reverseGet(other.reverseGet(it)) }
-    )
-
-    /** compose a [Prism] with a [Optional] */
-    infix fun <C> composeOptional(other: Optional<B, C>): Optional<A, C> =
-            asOptional() composeOptional other
-
-
     /**
      * Set the target of a [Prism] with a value
      */
@@ -151,19 +139,59 @@ abstract class Prism<A, B> {
     )
 
     fun asFold(): Fold<A, B> = object : Fold<A, B>() {
-        override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R = getOption(a).map(f).getOrElse { M.empty() }
+        override fun <R> foldMapI(M: Monoid<R>, a: A, f: (B) -> R): R = getOption(a).map(f).getOrElse { M.empty() }
     }
 
     /**
      * View a [Prism] as a [Traversal]
      */
     fun asTraversal(): Traversal<A, B> = object : Traversal<A, B>() {
-        override fun <F> modifyFF(FA: Applicative<F>, f: (B) -> HK<F, B>, a: A): HK<F, A> = getOrModify(a).fold(
+        override fun <F> modifyFI(FA: Applicative<F>, f: (B) -> HK<F, B>, a: A): HK<F, A> = getOrModify(a).fold(
                 FA::pure,
                 { FA.map(f(it), this@Prism::reverseGet) }
         )
     }
 
+    /**
+     * View a [Prism] as a [Setter]
+     */
+    fun asSetter(): Setter<A,B> = Setter(this::modify)
+
+
+    infix fun <C> composePrism(other: Prism<B, C>): Prism<A, C> = Prism(
+            { a -> getOrModify(a).flatMap { b: B -> other.getOrModify(b).bimap({ set(it)(a) }, ::identity) } },
+            { reverseGet(other.reverseGet(it)) }
+    )
+
+    /** compose a [Prism] with a [Optional] */
+    infix fun <C> composeOptional(other: Optional<B, C>): Optional<A, C> = asOptional() composeOptional other
+
+    infix fun <C> composeFold(other: Fold<B,C>): Fold<A,C> = asFold() composeFold other
+
+    infix fun <C> composeGetter(other: Getter<B,C>): Fold<A,C> = asFold() composeGetter other
+
+    infix fun <C> composeSetter(other: Setter<B,C>): Setter<A,C> = asSetter() composeSetter other
+
+    infix fun <C> composeTraversal(other: Traversal<B,C>): Traversal<A,C> = asTraversal() composeTraversal other
+
+    infix fun <C> composeLens(other: Lens<B,C>): Optional<A,C> = asOptional() composeLens other
+
+    /**
+     * Plus operator overload to compose lenses
+     */
+    operator fun <C> plus(other: Lens<B, C>): Optional<A, C> = composeLens(other)
+
+    operator fun <C> plus(other: Fold<B, C>): Fold<A, C> = composeFold(other)
+
+    operator fun <C> plus(other: Optional<B, C>): Optional<A, C> = composeOptional(other)
+
+    operator fun <C> plus(other: Getter<B, C>): Fold<A, C> = composeGetter(other)
+
+    operator fun <C> plus(other: Prism<B, C>): Prism<A, C> = composePrism(other)
+
+    operator fun <C> plus(other: Setter<B, C>): Setter<A, C> = composeSetter(other)
+
+    operator fun <C> plus(other: Traversal<B, C>): Traversal<A, C> = composeTraversal(other)
 }
 
 /**

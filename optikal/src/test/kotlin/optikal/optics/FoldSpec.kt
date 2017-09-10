@@ -22,7 +22,7 @@ class FoldSpec : StringSpec() {
         }
 
         "folding and mapping a list of strings" {
-            stringFold.foldMap(IntMonoid, listOf("1", "1", "1", "1", "1").k(), String::toInt)
+            stringFold.foldMapI(IntMonoid, listOf("1", "1", "1", "1", "1").k(), String::toInt)
         }
 
         "getting all values" {

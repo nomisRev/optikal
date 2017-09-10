@@ -27,19 +27,20 @@ abstract class Fold<A, B> {
      * Map each target to a Monoid and combine the results
      * underlying representation of [Fold], all [Fold] methods are defined in terms of foldMap
      */
-    abstract fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R
+    @PublishedApi internal abstract fun <R> foldMapI(M: Monoid<R>, a: A, f: (B) -> R): R
+
+    inline fun <reified R> foldMap(M: Monoid<R> = monoid(), a: A, noinline f: (B) -> R): R = foldMapI(M, a, f)
 
     companion object {
 
         fun <A> id() = Iso.id<A>().asFold()
 
         inline fun <reified A> codiagonal() = object : Fold<Either<A, A>, A>() {
-            override fun <R> foldMap(M: Monoid<R>, a: Either<A, A>, f: (A) -> R): R = a.fold(f, f)
+            override fun <R> foldMapI(M: Monoid<R>, a: Either<A, A>, f: (A) -> R): R = a.fold(f, f)
         }
 
         fun <A> select(p: (A) -> Boolean): Fold<A, A> = object : Fold<A, A>() {
-            override fun <R> foldMap(M: Monoid<R>, a: A, f: (A) -> R): R =
-                    if (p(a)) f(a) else M.empty()
+            override fun <R> foldMapI(M: Monoid<R>, a: A, f: (A) -> R): R = if (p(a)) f(a) else M.empty()
         }
 
         /**
@@ -51,18 +52,9 @@ abstract class Fold<A, B> {
          * Create a [Fold] from a Foldable
          */
         inline fun <reified F, A> fromFoldable(Foldable: Foldable<F> = foldable()) = object : Fold<HK<F, A>, A>() {
-            override fun <R> foldMap(M: Monoid<R>, a: HK<F, A>, f: (A) -> R): R = Foldable.foldMap(M, a, f)
+            override fun <R> foldMapI(M: Monoid<R>, a: HK<F, A>, f: (A) -> R): R = Foldable.foldMap(M, a, f)
         }
 
-
-    }
-
-    /**
-     * Compose a [Fold] with a [Fold]
-     */
-    infix inline fun <reified C> composeFold(other: Fold<B, C>): Fold<A, C> = object : Fold<A, C>() {
-        override fun <R> foldMap(M: Monoid<R>, a: A, f: (C) -> R): R =
-                this@Fold.foldMap(M, a, { b -> other.foldMap(M, b, { f(it) }) })
     }
 
     /**
@@ -117,22 +109,73 @@ abstract class Fold<A, B> {
      * Join two [Fold] with the same target
      */
     fun <C> choice(other: Fold<C, B>): Fold<Either<A, C>, B> = object : Fold<Either<A, C>, B>() {
-        override fun <R> foldMap(M: Monoid<R>, a: Either<A, C>, f: (B) -> R): R =
-                a.fold({ this@Fold.foldMap(M, it, f) }, { other.foldMap(M, it, f) })
+        override fun <R> foldMapI(M: Monoid<R>, a: Either<A, C>, f: (B) -> R): R =
+                a.fold({ this@Fold.foldMapI(M, it, f) }, { other.foldMapI(M, it, f) })
     }
 
     fun <C> left(): Fold<Either<A, C>, Either<B, C>> = object : Fold<Either<A, C>, Either<B, C>>() {
-        override fun <R> foldMap(M: Monoid<R>, a: Either<A, C>, f: (Either<B, C>) -> R): R =
-                a.fold({ a1: A -> this@Fold.foldMap(M, a1, { b -> f(b.left()) }) }, { c -> f(c.right()) })
+        override fun <R> foldMapI(M: Monoid<R>, a: Either<A, C>, f: (Either<B, C>) -> R): R =
+                a.fold({ a1: A -> this@Fold.foldMapI(M, a1, { b -> f(b.left()) }) }, { c -> f(c.right()) })
     }
 
     fun <C> right(): Fold<Either<C, A>, Either<C, B>> = object : Fold<Either<C, A>, Either<C, B>>() {
-        override fun <R> foldMap(M: Monoid<R>, a: Either<C, A>, f: (Either<C, B>) -> R): R =
-                a.fold({ c -> f(c.left()) }, { a1 -> this@Fold.foldMap(M, a1, { b -> f(b.right()) }) })
+        override fun <R> foldMapI(M: Monoid<R>, a: Either<C, A>, f: (Either<C, B>) -> R): R =
+                a.fold({ c -> f(c.left()) }, { a1 -> this@Fold.foldMapI(M, a1, { b -> f(b.right()) }) })
     }
 
+    /**
+     * Compose a [Fold] with a [Fold]
+     */
+    infix fun <C> composeFold(other: Fold<B, C>): Fold<A, C> = object : Fold<A, C>() {
+        override fun <R> foldMapI(M: Monoid<R>, a: A, f: (C) -> R): R = this@Fold.foldMapI(M, a, { b -> other.foldMapI(M, b, { f(it) }) })
+    }
+
+    /**
+     * Compose a [Fold] with a [Getter]
+     */
+    infix fun <C> composeGetter(other: Getter<B, C>): Fold<A, C> = composeFold(other.asFold())
+
+    /**
+     * Compose a [Fold] with a [Traversal]
+     */
+//    infix fun <C> composeTraversal(other: Traversal<A,B>): Fold<A,B> = TODO figure out a way to transform Traversal to Fold.
+
+    /**
+     * Compose a [Fold] with a [Optional]
+     */
+    infix fun <C> composeOptional(other: Optional<B,C>): Fold<A,C> = composeFold(other.asFold())
+
+    /**
+     * Compose a [[Fold]] with a [Prism]
+     */
+    infix fun <C> composePrism(other: Prism<B,C>): Fold<A,C> = composeFold(other.asFold())
+
+    /**
+     * Compose a [Fold] with a [Lens]
+     */
+    infix fun <C> composeLens(other: Lens<B,C>): Fold<A,C> = composeFold(other.asFold())
+
+    /**
+     * Compose a [Fold] with a [Iso]
+     */
+    infix fun <C> composeIso(other: Iso<B,C>): Fold<A,C> = composeFold(other.asFold())
+
+    /**
+     * Plus operator overload to compose lenses
+     */
+    operator fun <C> plus(other: Fold<B, C>): Fold<A, C> = composeFold(other)
+
+    operator fun <C> plus(other: Optional<B, C>): Fold<A, C> = composeOptional(other)
+
+    operator fun <C> plus(other: Getter<B, C>): Fold<A, C> = composeGetter(other)
+
+    operator fun <C> plus(other: Prism<B, C>): Fold<A, C> = composePrism(other)
+
+    operator fun <C> plus(other: Lens<B, C>): Fold<A, C> = composeLens(other)
+
+    operator fun <C> plus(other: Iso<B, C>): Fold<A, C> = composeIso(other)
 }
 
-inline fun <A, reified B> Fold<A, B>.fold(M: Monoid<B> = monoid(), a: A): B = foldMap(M, a, ::identity)
+inline fun <A, reified B> Fold<A, B>.fold(M: Monoid<B> = monoid(), a: A): B = foldMapI(M, a, ::identity)
 
-inline fun <A, reified B> Fold<A, B>.getAll(M: Monoid<ListKW<B>> = monoid(), a: A): ListKW<B> = foldMap(M, a, { ListKW.pure(it) })
+inline fun <A, reified B> Fold<A, B>.getAll(M: Monoid<ListKW<B>> = monoid(), a: A): ListKW<B> = foldMapI(M, a, { ListKW.pure(it) })

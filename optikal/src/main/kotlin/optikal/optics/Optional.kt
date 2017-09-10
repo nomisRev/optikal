@@ -95,7 +95,7 @@ abstract class Optional<A, B> {
     operator fun <C> plus(o: Lens<B, C>): Optional<A, C> = composeLens(o)
 
     fun asFold() = object : Fold<A, B>() {
-        override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R =
+        override fun <R> foldMapI(M: Monoid<R>, a: A, f: (B) -> R): R =
                 getOption(a).map(f).getOrElse { M.empty() }
     }
 
@@ -103,7 +103,7 @@ abstract class Optional<A, B> {
      * View a [Optional] as a [Traversal]
      */
     fun asTraversal() = object : Traversal<A, B>() {
-        override fun <F> modifyFF(FA: Applicative<F>, f: (B) -> HK<F, B>, a: A): HK<F, A> = getOrModify(a).fold(
+        override fun <F> modifyFI(FA: Applicative<F>, f: (B) -> HK<F, B>, a: A): HK<F, A> = getOrModify(a).fold(
                 { FA.pure(it) },
                 { FA.map(f(it), { set(it)(a) }) }
         )
