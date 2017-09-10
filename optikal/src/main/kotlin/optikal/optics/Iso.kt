@@ -75,4 +75,29 @@ abstract class Iso<A, B> {
             this::get,
             this::set
     )
+
+    /**
+     * view a [Iso] as a [Getter]
+     */
+    fun asGetter(): Getter<A,B> = Getter(this::get)
+
+    /**
+     * View an [Iso] as a [Setter]
+     */
+    fun asSetter(): Setter<A, B> = Setter(this::modify)
+
+    /**
+     * View a [Iso] as a [Traversal]
+     */
+    fun asTraversal(): Traversal<A, B> = object : Traversal<A, B>() {
+        override fun <F> modifyFF(FA: Applicative<F>, f: (B) -> HK<F, B>, a: A): HK<F, A> =
+                FA.map(f(get(a)), this@Iso::reverseGet)
+    }
+
+    /**
+     * View a [Iso] as a [Fold]
+     */
+    fun asFold(): Fold<A,B> = object : Fold<A,B>(){
+        override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R = f(get(a))
+    }
 }
