@@ -6,11 +6,14 @@ import kategory.HK
 import kategory.IntMonoid
 import kategory.ListKW
 import kategory.Monoid
+import kategory.Option
 import kategory.foldable
 import kategory.identity
 import kategory.left
 import kategory.monoid
+import kategory.none
 import kategory.right
+import kategory.some
 
 /**
  * A [Fold] can be seen as a [Getter] with many targets or a weaker [PTraversal] which cannot modify its target.
@@ -66,6 +69,49 @@ abstract class Fold<A, B> {
      * Calculate the number of targets
      */
     fun length(a: A) = foldMap(IntMonoid, a, { 1 })
+
+    /**
+     * Find the first target matching the predicate
+     */
+    fun find(p: (B) -> Boolean): (A) -> Option<B> = { a ->
+        foldMap(M = firstOptionMonoid<B>(), a = a, f = { b -> (if (p(b)) b.some() else none()).tag() }).unwrap()
+    }
+
+    /**
+     * Get the first target
+     */
+    fun headOption(a: A): Option<B> = foldMap(firstOptionMonoid<B>(), a, { it.some().tag() }).unwrap()
+
+    /**
+     * Get the last target
+     */
+    fun lastOption(a: A): Option<B> = foldMap(lastOptionMonoid<B>(), a, { it.some().tag() }).unwrap()
+
+    /**
+     * Check if all targets satisfy the predicate
+     * TODO move addMonoid to kategory
+     */
+    fun all(p: (B) -> Boolean): (A) -> Boolean = { a ->
+        foldMap(M = object : Monoid<Boolean> {
+            override fun combine(a: Boolean, b: Boolean): Boolean = a && b
+
+            override fun empty(): Boolean = true
+        }, a = a, f = p)
+    }
+
+    /**
+     * Check if there is no target
+     */
+    fun isEmpty(a: A): Boolean = foldMap(M = object : Monoid<Boolean> {
+        override fun combine(a: Boolean, b: Boolean): Boolean = a && b
+
+        override fun empty(): Boolean = true
+    }, a = a, f = { false })
+
+    /**
+     * Check if there is at least one target
+     */
+    fun nonEmpty(a: A): Boolean = !isEmpty(a)
 
     /**
      * Join two [Fold] with the same target
