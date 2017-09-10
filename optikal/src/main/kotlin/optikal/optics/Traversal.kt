@@ -7,6 +7,7 @@ import kategory.HK
 import kategory.Id
 import kategory.IntMonoid
 import kategory.Monoid
+import kategory.Option
 import kategory.applicative
 import kategory.identity
 import kategory.map
@@ -61,6 +62,16 @@ abstract class Traversal<A, B> {
      * Calculate the number of targets
      */
     fun length(a: A): Int = foldMap(Const.applicative(), IntMonoid, { 1 }, a)
+}
+
+
+/**
+ * Find the first target matching the predicate
+ */
+inline fun <reified A, reified B> Traversal<A, B>.find(crossinline p: (B) -> Boolean): (A) -> Option<B> = { a: A ->
+    foldMap(Const.applicative(), firstOptionMonoid<B>(), { b ->
+        (if (p(b)) Option.Some(b) else Option.None).tag()
+    }, a).unwrap()
 }
 
 inline fun <reified A, reified B> Traversal<A, B>.fold(M: Monoid<B> = monoid(), a: A): B =
