@@ -1,4 +1,4 @@
-package optikal
+package optikal.optics
 
 import kategory.Applicative
 import kategory.Either

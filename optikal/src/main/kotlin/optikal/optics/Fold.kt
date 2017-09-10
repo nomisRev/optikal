@@ -1,4 +1,4 @@
-package optikal
+package optikal.optics
 
 import kategory.Either
 import kategory.Foldable

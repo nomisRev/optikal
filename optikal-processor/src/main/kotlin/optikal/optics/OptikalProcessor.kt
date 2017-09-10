@@ -1,4 +1,4 @@
-package optikal
+package optikal.optics
 
 import me.eugeniomarletti.kotlin.metadata.KotlinClassMetadata
 import me.eugeniomarletti.kotlin.metadata.isDataClass

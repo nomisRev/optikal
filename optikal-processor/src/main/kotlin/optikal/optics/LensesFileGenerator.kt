@@ -1,4 +1,4 @@
-package optikal
+package optikal.optics
 
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KotlinFile

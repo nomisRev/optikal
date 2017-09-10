@@ -1,16 +1,18 @@
-package optikal
+package optikal.optics
 
 import kategory.Applicative
 import kategory.Option
 import kategory.Either
 import kategory.HK
 import kategory.Monoid
+import kategory.Tuple2
 import kategory.applicative
 import kategory.flatMap
 import kategory.getOrElse
 import kategory.identity
 import kategory.left
 import kategory.right
+import kategory.toT
 
 /**
  * A [Prism] can be seen as a pair of functions: `reverseGet : B -> A` and `getOrModify: A -> Either<A,B>`
@@ -78,20 +80,21 @@ abstract class Prism<A, B> {
     infix fun <C> composeOptional(other: Optional<B, C>): Optional<A, C> =
             asOptional() composeOptional other
 
+
     /**
      * Set the target of a [Prism] with a value
      */
     fun setOption(b: B): (A) -> Option<A> = modifyOption { b }
 
     /**
-     * Check if there is no target
-     */
-    fun isEmpty(a: A): Boolean = getOption(a).isDefined
-
-    /**
      * Check if there is a target
      */
-    fun nonEmpty(a: A): Boolean = getOption(a).nonEmpty
+    fun isNotEmpty(a: A): Boolean = getOption(a).isDefined
+
+    /**
+     * Check if there is no target
+     */
+    fun isEmpty(a: A): Boolean = !isNotEmpty(a)
 
     /**
      * Find if the target satisfies the predicate
@@ -109,19 +112,19 @@ abstract class Prism<A, B> {
     inline fun all(crossinline p: (B) -> Boolean): (A) -> Boolean = { getOption(it).fold({ true }, p) }
 
     /**
-     * Convenience method to create a sum of the target and a type C
+     * Convenience method to create a product of the target and a type C
      */
-    fun <C> first(): Prism<Pair<A, C>, Pair<B, C>> = Prism(
-            { (a, c) -> getOrModify(a).bimap({ it to c }, { it to c }) },
-            { (b, c) -> reverseGet(b) to c }
+    fun <C> first(): Prism<Tuple2<A, C>, Tuple2<B, C>> = Prism(
+            { (a, c) -> getOrModify(a).bimap({ it toT c }, { it toT c }) },
+            { (b, c) -> reverseGet(b) toT c }
     )
 
     /**
-     * Convenience method to create a sum of a type C and the target
+     * Convenience method to create a product of a type C and the target
      */
-    fun <C> second(): Prism<Pair<C, A>, Pair<C, B>> = Prism(
-            { (c, a) -> getOrModify(a).bimap({ c to it }, { c to it }) },
-            { (c, b) -> c to reverseGet(b) }
+    fun <C> second(): Prism<Tuple2<C, A>, Tuple2<C, B>> = Prism(
+            { (c, a) -> getOrModify(a).bimap({ c toT it }, { c toT it }) },
+            { (c, b) -> c toT reverseGet(b) }
     )
 
     /**
@@ -133,14 +136,23 @@ abstract class Prism<A, B> {
     )
 
     fun asFold(): Fold<A, B> = object : Fold<A, B>() {
-        override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R =
-                getOption(a).map(f).getOrElse { M.empty() }
+        override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R = getOption(a).map(f).getOrElse { M.empty() }
+    }
+
+    /**
+     * View a [Prism] as a [Traversal]
+     */
+    fun asTraversal(): Traversal<A, B> = object : Traversal<A, B>() {
+        override fun <F> modifyFF(FA: Applicative<F>, f: (B) -> HK<F, B>, a: A): HK<F, A> = getOrModify(a).fold(
+                FA::pure,
+                { FA.map(f(it), this@Prism::reverseGet) }
+        )
     }
 
 }
 
 /**
- * Convenience method to create a product of the target and a type C
+ * Convenience method to create a sum of the target and a type C
  */
 fun <A, B, C> Prism<A, B>.left(): Prism<Either<A, C>, Either<B, C>> = Prism(
         { it.fold({ a -> getOrModify(a).bimap({ it.left() }, { it.left() }) }, { c -> Either.Right(c.right()) }) },
@@ -153,7 +165,7 @@ fun <A, B, C> Prism<A, B>.left(): Prism<Either<A, C>, Either<B, C>> = Prism(
 )
 
 /**
- * Convenience method to create a product of a type C and the target
+ * Convenience method to create a sum of a type C and the target
  */
 fun <A, B, C> Prism<A, B>.right(): Prism<Either<C, A>, Either<C, B>> = Prism(
         { it.fold({ c -> Either.Right(c.left()) }, { a -> getOrModify(a).bimap({ it.right() }, { it.right() }) }) },

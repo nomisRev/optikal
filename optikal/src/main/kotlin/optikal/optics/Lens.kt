@@ -1,5 +1,6 @@
-package optikal
+package optikal.optics
 
+import kategory.Applicative
 import kategory.Either
 import kategory.Functor
 import kategory.HK
@@ -132,6 +133,14 @@ abstract class Lens<A, B> {
      */
     fun asFold() = object : Fold<A, B>() {
         override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R = f(get(a))
+    }
+
+    /**
+     * View a [Lens] as a [Traversal]
+     */
+    fun asTraversal(): Traversal<A, B> = object : Traversal<A, B>() {
+        override fun <F> modifyFF(FA: Applicative<F>, f: (B) -> HK<F, B>, a: A): HK<F, A> =
+                FA.map(f(get(a)), { set(it)(a) })
     }
 
 }

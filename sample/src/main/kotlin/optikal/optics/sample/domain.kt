@@ -1,4 +1,4 @@
-package optikal.sample
+package optikal.optics.sample
 
 import kategory.getOrElse
 import optikal.*

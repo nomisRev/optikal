@@ -1,5 +1,5 @@
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
     testCompile "io.kotlintest:kotlintest:$kotlinTestVersion"
-    compile('io.kategory:kategory:0.3.5')
+    compile 'com.github.kategory.kategory:kategory-test:-SNAPSHOT'
 }

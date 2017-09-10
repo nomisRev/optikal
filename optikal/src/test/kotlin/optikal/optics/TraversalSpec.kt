@@ -1,4 +1,4 @@
-package optikal
+package optikal.optics
 
 import io.kotlintest.KTestJUnitRunner
 import io.kotlintest.matchers.shouldBe
