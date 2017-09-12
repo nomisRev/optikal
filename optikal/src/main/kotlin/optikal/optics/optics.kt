@@ -1,4 +1,4 @@
-package optikal
+package optikal.optics
 
 import kotlin.annotation.AnnotationRetention.SOURCE
 import kotlin.annotation.AnnotationTarget.CLASS

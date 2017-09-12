@@ -1,51 +1,46 @@
-package kategory.optics
+package optikal.optics
 
 import io.kotlintest.KTestJUnitRunner
 import io.kotlintest.properties.Gen
 import io.kotlintest.properties.forAll
-import io.kotlintest.specs.StringSpec
 import kategory.Applicative
+import kategory.Eq
 import kategory.HK
 import kategory.Option
+import kategory.UnitSpec
 import kategory.applicative
 import kategory.exists
 import kategory.functor
+import kategory.genFunctionAToB
 import kategory.left
 import kategory.right
-import optikal.Lens
+import optikal.optics.laws.LensLaws
+import optikal.optics.laws.OptionalLaws
 import org.junit.runner.RunWith
 
 @RunWith(KTestJUnitRunner::class)
-class LensTest : StringSpec() {
-
-    private data class Token(val value: String)
-    private object TokenGen : Gen<Token> {
-        override fun generate() = Token(Gen.string().generate())
-    }
-
-    private val tokenLens: Lens<Token, String> = Lens(
-            get = { token: Token -> token.value },
-            set = { value: String -> { token: Token -> token.copy(value = value) } }
-    )
-
-    private data class User(val token: Token)
-    private object UserGen : Gen<User> {
-        override fun generate() = User(TokenGen.generate())
-    }
-
-    private val userLens: Lens<User, Token> = Lens(
-            get = { user: User -> user.token },
-            set = { token: Token -> { user: User -> user.copy(token = token) } }
-    )
-
-    private val token = Token("old value")
-    private val oldUser = User(token)
-
-    private val userTokenLens = userLens composeLens tokenLens
-
-    inline fun <reified F> getVal(FA: Applicative<F> = applicative(), a: String): HK<F, String> = FA.pure(a)
+class LensSpec : UnitSpec() {
 
     init {
+
+        testLaws(
+                LensLaws.laws(
+                        lens = tokenLens,
+                        aGen = TokenGen,
+                        bGen = Gen.string(),
+                        funcGen = genFunctionAToB(Gen.string()),
+                        EQA = Eq.any(),
+                        EQB = Eq.any(),
+                        FA = Option.applicative()
+                ) +  OptionalLaws.laws(
+                        optional = tokenLens.asOptional(),
+                        aGen = TokenGen,
+                        bGen = Gen.string(),
+                        funcGen = genFunctionAToB(Gen.string()),
+                        EQA = Eq.any(),
+                        EQB = Eq.any()
+                )
+        )
 
         "Get should extract the target" {
             forAll({ value: String ->
@@ -69,10 +64,10 @@ class LensTest : StringSpec() {
         }
 
         "ModifyF should modify the target using a Functor function" {
-//            forAll({ modifiedValue: String ->
-//                tokenLens.modifyF(Option.functor(), f = { getVal(Option.applicative(), a = modifiedValue) }, a = token)
-//                        .exists(f = { it.value == modifiedValue })
-//            })
+            forAll({ modifiedValue: String ->
+                tokenLens.modifyF(Option.functor(), f = { getVal(Option.applicative(), a = modifiedValue) }, a = token)
+                        .exists(f = { it.value == modifiedValue })
+            })
         }
 
         "Finding a target using a predicate within a Lens should be wrapped in the correct option result" {
@@ -134,3 +129,30 @@ class LensTest : StringSpec() {
     }
 
 }
+
+data class Token(val value: String)
+object TokenGen : Gen<Token> {
+    override fun generate() = Token(Gen.string().generate())
+}
+
+val tokenLens: Lens<Token, String> = Lens(
+        get = { token: Token -> token.value },
+        set = { value: String -> { token: Token -> token.copy(value = value) } }
+)
+
+data class User(val token: Token)
+object UserGen : Gen<User> {
+    override fun generate() = User(TokenGen.generate())
+}
+
+val userLens: Lens<User, Token> = Lens(
+        get = { user: User -> user.token },
+        set = { token: Token -> { user: User -> user.copy(token = token) } }
+)
+
+val token = Token("old value")
+val oldUser = User(token)
+
+val userTokenLens = userLens composeLens tokenLens
+
+inline fun <reified F> getVal(FA: Applicative<F> = applicative(), a: String): HK<F, String> = FA.pure(a)

@@ -1,4 +1,4 @@
-package optikal
+package optikal.optics
 
 import javax.annotation.processing.Messager
 import javax.lang.model.element.Element

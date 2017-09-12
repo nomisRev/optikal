@@ -1,11 +1,15 @@
-package optikal
+package optikal.optics
 
+import kategory.Applicative
 import kategory.Either
 import kategory.Functor
 import kategory.HK
 import kategory.Monoid
 import kategory.Option
 import kategory.functor
+import kategory.identity
+import kategory.none
+import kategory.some
 
 /**
  * A [Lens] can be seen as a pair of functions `get: (A) -> B` and `set: (B) -> (A) -> A`
@@ -24,6 +28,14 @@ abstract class Lens<A, B> {
     abstract fun set(b: B): (A) -> A
 
     companion object {
+
+        fun <A> id() = Iso.id<A>().asLens()
+
+        fun <A> codiagonal() = Lens<Either<A, A>, A>(
+                get = { it.fold(::identity, ::identity) },
+                set = { a -> { it.bimap({ a }, { a }) } }
+        )
+
         operator fun <A, B> invoke(get: (A) -> B, set: (B) -> (A) -> A) = object : Lens<A, B>() {
             override fun get(a: A): B = get(a)
 
@@ -40,14 +52,15 @@ abstract class Lens<A, B> {
      * Modify the target of a [Lens] using Functor function
      */
     inline fun <reified F> modifyF(FF: Functor<F> = functor(), f: (B) -> HK<F, B>, a: A): HK<F, A> =
-            FF.map(f(get(a)), { set(it)(a) })
+            FF.map(f(get(a)), { b -> set(b)(a) })
 
     /**
      * Find if the target satisfies the predicate
      */
     inline fun find(crossinline p: (B) -> Boolean): (A) -> Option<B> = {
-        val a = get(it)
-        if (p(a)) Option.Some(a) else Option.None
+        get(it).let { a ->
+            if (p(a)) a.some() else none()
+        }
     }
 
     /**
@@ -119,7 +132,7 @@ abstract class Lens<A, B> {
      */
     fun asOptional(): Optional<A, B> = Optional(
             { a -> Option.Some(get(a)) },
-            { b -> set(b) }
+            this::set
     )
 
     /**
@@ -131,7 +144,15 @@ abstract class Lens<A, B> {
      * View a [Lens] as a [Fold]
      */
     fun asFold() = object : Fold<A, B>() {
-        override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R = f(get(a))
+        override fun <R> foldMapI(M: Monoid<R>, a: A, f: (B) -> R): R = f(get(a))
+    }
+
+    /**
+     * View a [Lens] as a [Traversal]
+     */
+    fun asTraversal(): Traversal<A, B> = object : Traversal<A, B>() {
+        override fun <F> modifyFI(FA: Applicative<F>, f: (B) -> HK<F, B>, a: A): HK<F, A> =
+                FA.map(f(get(a)), { set(it)(a) })
     }
 
 }

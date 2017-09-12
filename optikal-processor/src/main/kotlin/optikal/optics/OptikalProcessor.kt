@@ -1,4 +1,4 @@
-package optikal
+package optikal.optics
 
 import me.eugeniomarletti.kotlin.metadata.KotlinClassMetadata
 import me.eugeniomarletti.kotlin.metadata.isDataClass
@@ -23,7 +23,7 @@ class OptikalProcessor : KotlinAbstractProcessor() {
 
     override fun getSupportedSourceVersion(): SourceVersion = SourceVersion.latestSupported()
 
-    override fun getSupportedAnnotationTypes() = setOf(lensesAnnotationClass.canonicalName)
+    override fun getSupportedAnnotationTypes() = setOf(lensesAnnotationClass.canonicalName, prismsAnnotationClass.canonicalName)
 
     class KnownException(message: String) : RuntimeException(message) {
         override val message: String get() = super.message as String

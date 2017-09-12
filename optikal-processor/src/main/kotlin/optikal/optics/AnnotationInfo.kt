@@ -1,4 +1,4 @@
-package optikal
+package optikal.optics
 
 val lensesAnnotationKClass = Lenses::class
 val lensesAnnotationClass = lensesAnnotationKClass.java

@@ -1,4 +1,4 @@
-package optikal
+package optikal.optics
 
 import kategory.Either
 import kategory.Monoid
@@ -23,8 +23,13 @@ abstract class Getter<A, B> {
     abstract fun get(a: A): B
 
     companion object {
-        operator fun <A, B> invoke(_get: (A) -> B) = object : Getter<A, B>() {
-            override fun get(a: A): B = _get(a)
+
+        fun <A> id() = Iso.id<A>().asGetter()
+
+        fun <A> codiagonal(): Getter<Either<A, A>, A> = Getter { aa -> aa.fold(::identity, ::identity) }
+
+        operator fun <A, B> invoke(get: (A) -> B) = object : Getter<A, B>() {
+            override fun get(a: A): B = get(a)
         }
     }
 
@@ -32,8 +37,8 @@ abstract class Getter<A, B> {
      * Find if the target satisfies the predicate.
      */
     inline fun find(crossinline p: (B) -> Boolean): (A) -> Option<B> = { a ->
-        get(a).let {
-            if (p(it)) it.some() else none()
+        get(a).let { b ->
+            if (p(b)) b.some() else none()
         }
     }
 
@@ -68,25 +73,23 @@ abstract class Getter<A, B> {
         c toT get(a)
     }
 
-    fun <C> left(): Getter<Either<A, C>, Either<B, C>> = Getter {
-        it.bimap(this::get, ::identity)
+    fun <C> left(): Getter<Either<A, C>, Either<B, C>> = Getter { ac ->
+        ac.bimap(this::get, ::identity)
     }
 
-    fun <C> right(): Getter<Either<C, A>, Either<C, B>> = Getter {
-        it.map(this::get)
+    fun <C> right(): Getter<Either<C, A>, Either<C, B>> = Getter { ca ->
+        ca.map(this::get)
     }
 
     /**
      * Compose a [Getter] with a [Getter]
      */
-    infix fun <C> composeGetter(other: Getter<B, C>): Getter<A, C> = Getter { a ->
-        other.get(get(a))
-    }
+    infix fun <C> composeGetter(other: Getter<B, C>): Getter<A, C> = Getter(other::get compose this::get)
 
-    operator fun <C> plus(other: Getter<B, C>): Getter<A,C> = composeGetter(other)
+    operator fun <C> plus(other: Getter<B, C>): Getter<A, C> = composeGetter(other)
 
-    fun asFold() = object : Fold<A,B>() {
-        override fun <R> foldMap(M: Monoid<R>, a: A, f: (B) -> R): R = f(get(a))
+    fun asFold() = object : Fold<A, B>() {
+        override fun <R> foldMapI(M: Monoid<R>, a: A, f: (B) -> R): R = f(get(a))
     }
 
 }

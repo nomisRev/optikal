@@ -1,4 +1,4 @@
-package optikal
+package optikal.optics
 
 import javax.lang.model.element.TypeElement
 import javax.lang.model.element.VariableElement
