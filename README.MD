@@ -1,5 +1,5 @@
 # Optikal
 
-This repo is deprecated. Everything moved to [Kategory](http://kategory.io) under the kategory repo in the optics and annotations module.
+This repo is deprecated. Everything moved to [Λrrow](http://arrow-kt.io/) under the Λrrow repo in the optics and annotations module.
 
-This is became a playground for me to freely play with some concepts and experiment.
+More info on Optics: http://arrow-kt.io/docs/optics/iso/
